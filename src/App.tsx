@@ -357,7 +357,18 @@ export default function App() {
                   <div>
                     <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>All Warranties</h2>
                     {warranties.length === 0 ? (
-                      <p style={{ color: 'var(--text-secondary)' }}>No warranties found.</p>
+                      <div style={{ textAlign: 'center', padding: '4rem 2rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-lg)', border: '1px dashed var(--border-color)' }}>
+                        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+                          <Icons.Shield style={{ width: '32px', height: '32px', color: 'var(--accent-color)' }} />
+                        </div>
+                        <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', fontWeight: 600 }}>No Warranties Yet</h3>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', maxWidth: '400px', margin: '0 auto 2rem' }}>
+                          Your vault is empty. Secure your first product by creating a smart warranty backed by GenLayer.
+                        </p>
+                        <button className="btn btn-primary" onClick={() => setActiveTab('create')}>
+                          Create Warranty
+                        </button>
+                      </div>
                     ) : (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
                         {warranties.map((w, idx) => {
@@ -482,7 +493,18 @@ export default function App() {
                 </div>
                 
                 {filteredClaims.length === 0 ? (
-                  <p style={{ color: 'var(--text-secondary)' }}>{claims.length === 0 ? 'No claims filed yet.' : 'No claims found for this warranty.'}</p>
+                  <div style={{ textAlign: 'center', padding: '4rem 2rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-lg)', border: '1px dashed var(--border-color)' }}>
+                    <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(139, 92, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+                      <Icons.AlertTriangle style={{ width: '32px', height: '32px', color: 'var(--warning-color)' }} />
+                    </div>
+                    <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', fontWeight: 600 }}>No Claims Found</h3>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', maxWidth: '400px', margin: '0 auto 2rem' }}>
+                      {claims.length === 0 ? 'Everything is running smoothly. No claims have been filed yet.' : 'There are no claims associated with this specific warranty.'}
+                    </p>
+                    <button className="btn btn-secondary" onClick={() => setActiveTab('dashboard')}>
+                      Return to Dashboard
+                    </button>
+                  </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     {filteredClaims.map((c, idx) => {
