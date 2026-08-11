@@ -652,6 +652,9 @@ Customer: ${customerAddress || 'N/A'}`;
                     style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}
                     onClick={() => {
                       setProductInfo("MacBook Pro M3 Max (2023)");
+                      setSerialNumber("C02XQ0ABCDEF");
+                      setCategory("Electronics");
+                      setCustomerAddress("0x742d35Cc6634C0532925a3b844Bc454e4438f44e");
                       setPolicyUrl("https://raw.githubusercontent.com/tuannguyenvan95/WarrantyVault/master/README.md");
                       setAmount("10.5");
                       setDuration("31536000");
