@@ -9,6 +9,15 @@ import './index.css';
 // We will let user paste their contract address or use VITE_CONTRACT_ADDRESS
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "";
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+};
+
 export default function App() {
   const [client, setClient] = useState<any>(null);
   const [account, setAccount] = useState<string | null>(null);
@@ -236,19 +245,21 @@ export default function App() {
       {/* Main Content */}
       <main className="container" style={{ marginTop: '2rem', paddingBottom: '4rem' }}>
         
-        {/* Alerts */}
-        <AnimatePresence>
-          {errorMsg && (
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--danger-color)', color: 'var(--danger-color)', borderRadius: 'var(--radius-md)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Icons.AlertTriangle /> {errorMsg}
-            </motion.div>
-          )}
-          {successMsg && (
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ padding: '1rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid var(--success-color)', color: 'var(--success-color)', borderRadius: 'var(--radius-md)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Icons.Check /> {successMsg}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Toasts */}
+        <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <AnimatePresence>
+            {errorMsg && (
+              <motion.div initial={{ opacity: 0, x: 50, scale: 0.9 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: 50, scale: 0.9 }} style={{ padding: '1rem 1.5rem', background: 'rgba(239, 68, 68, 0.9)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', gap: '0.75rem', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', fontWeight: 500 }}>
+                <Icons.AlertTriangle style={{ width: 20, height: 20 }} /> {errorMsg}
+              </motion.div>
+            )}
+            {successMsg && (
+              <motion.div initial={{ opacity: 0, x: 50, scale: 0.9 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: 50, scale: 0.9 }} style={{ padding: '1rem 1.5rem', background: 'rgba(16, 185, 129, 0.9)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', gap: '0.75rem', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', fontWeight: 500 }}>
+                <Icons.Check style={{ width: 20, height: 20 }} /> {successMsg}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         {!CONTRACT_ADDRESS ? (
           <div className="card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
@@ -276,9 +287,10 @@ export default function App() {
             </div>
 
             {loading && (
-              <div style={{ textAlign: 'center', padding: '2rem' }}>
-                <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid var(--border-color)', borderTopColor: 'var(--accent-color)', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }}></div>
-                <p style={{ color: 'var(--text-secondary)' }}>Processing on GenLayer... this may take a moment for consensus.</p>
+              <div style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+                <div style={{ width: 64, height: 64, borderRadius: '50%', border: '4px solid rgba(59, 130, 246, 0.1)', borderTopColor: 'var(--accent-color)', animation: 'spin 1s linear infinite', margin: '0 auto 1.5rem', boxShadow: '0 0 20px rgba(59, 130, 246, 0.2)' }}></div>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', fontWeight: 600 }}>Syncing with GenLayer</h3>
+                <p style={{ color: 'var(--text-secondary)' }}>Awaiting non-deterministic consensus from validators...</p>
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
               </div>
             )}
@@ -299,7 +311,10 @@ export default function App() {
                     <div className="card glass-panel" style={{ maxWidth: '800px', margin: '0 auto' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
                         <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>{selectedWarranty.product_info}</h2>
-                        <span className={`badge badge-${selectedWarranty.status.toLowerCase()}`}>{selectedWarranty.status}</span>
+                        <span className={`badge badge-${selectedWarranty.status.toLowerCase()}`}>
+                          {selectedWarranty.status === 'ACTIVE' && <span className="pulse-dot"></span>}
+                          {selectedWarranty.status}
+                        </span>
                       </div>
                       
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
@@ -366,7 +381,40 @@ export default function App() {
                   </div>
                 ) : (
                   // Warranties Grid
-                  <div>
+                  <motion.div variants={containerVariants} initial="hidden" animate="show">
+                    <div style={{ marginBottom: '3rem' }}>
+                      <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Vault Overview</h2>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+                        <div className="card glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem' }}>
+                          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Icons.Shield style={{ color: 'var(--accent-color)', width: 24, height: 24 }} />
+                          </div>
+                          <div>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Total Warranties</p>
+                            <h3 style={{ fontSize: '1.75rem', fontWeight: 700 }}>{warranties.length}</h3>
+                          </div>
+                        </div>
+                        <div className="card glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem' }}>
+                          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Icons.Wallet style={{ color: 'var(--success-color)', width: 24, height: 24 }} />
+                          </div>
+                          <div>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Total Value Locked</p>
+                            <h3 style={{ fontSize: '1.75rem', fontWeight: 700 }}>{warranties.reduce((acc, w) => acc + parseFloat(weiToEth(w.locked_amount)), 0).toFixed(2)} GEN</h3>
+                          </div>
+                        </div>
+                        <div className="card glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem' }}>
+                          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(139, 92, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Icons.Brain style={{ color: 'var(--warning-color)', width: 24, height: 24 }} />
+                          </div>
+                          <div>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Pending Claims</p>
+                            <h3 style={{ fontSize: '1.75rem', fontWeight: 700 }}>{claims.filter(c => c.status === 'PENDING').length}</h3>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>All Warranties</h2>
                     {warranties.length === 0 ? (
                       <div style={{ textAlign: 'center', padding: '4rem 2rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-lg)', border: '1px dashed var(--border-color)' }}>
@@ -386,15 +434,20 @@ export default function App() {
                         {warranties.map((w, idx) => {
                           const expiryInfo = formatExpiryTime(w.expiry);
                           return (
-                            <div 
+                            <motion.div 
+                              variants={itemVariants}
                               key={idx} 
                               className="card glass-panel"
                               style={{ cursor: 'pointer' }}
+                              whileHover={{ scale: 1.02 }}
                               onClick={() => setSelectedWarranty(w)}
                             >
                               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
                                 <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>ID: {w.id.toString()}</span>
-                                <span className={`badge badge-${w.status.toLowerCase()}`}>{w.status}</span>
+                                <span className={`badge badge-${w.status.toLowerCase()}`}>
+                                  {w.status === 'ACTIVE' && <span className="pulse-dot"></span>}
+                                  {w.status}
+                                </span>
                               </div>
                               <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', fontWeight: 600 }}>{w.product_info}</h3>
                               <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
@@ -416,12 +469,12 @@ export default function App() {
                                   </button>
                                 )}
                               </div>
-                            </div>
+                            </motion.div>
                           );
                         })}
                       </div>
                     )}
-                  </div>
+                  </motion.div>
                 )}
               </div>
             )}
@@ -546,14 +599,14 @@ export default function App() {
                     </button>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  <motion.div variants={containerVariants} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     {filteredClaims.map((c, idx) => {
                       // Find the associated warranty for expiry info
                       const associatedWarranty = warranties.find(w => w.id.toString() === c.warranty_id.toString());
                       const expiryInfo = associatedWarranty ? formatExpiryTime(associatedWarranty.expiry) : null;
                       
                       return (
-                      <div key={idx} className="card glass-panel">
+                      <motion.div variants={itemVariants} key={idx} className="card glass-panel">
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                           <div>
                             <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'block' }}>Claim ID: {c.id.toString()}</span>
@@ -629,16 +682,31 @@ export default function App() {
                             })()}
                           </div>
                         )}
-                      </div>
+                      </motion.div>
                       );
                     })}
-                  </div>
+                  </motion.div>
                 )}
               </div>
             )}
           </>
         )}
       </main>
+      
+      {/* Footer */}
+      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: 'auto' }}>
+        <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <p>© 2026 WarrantyVault. Secured by GenLayer Validators.</p>
+          <div style={{ display: 'flex', gap: '1.5rem' }}>
+            <a href="https://github.com/tuannguyenvan95/WarrantyVault" target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)' }}>
+              GitHub
+            </a>
+            <a href="#" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)' }}>
+              Documentation
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
