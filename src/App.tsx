@@ -127,6 +127,10 @@ export default function App() {
 
   // Forms
   const [productInfo, setProductInfo] = useState("");
+  const [serialNumber, setSerialNumber] = useState("");
+  const [category, setCategory] = useState("Electronics");
+  const [customerAddress, setCustomerAddress] = useState("");
+  
   const [policyUrl, setPolicyUrl] = useState("");
   const [duration, setDuration] = useState("31536000"); // 1 year default
   const [amount, setAmount] = useState("");
@@ -144,18 +148,15 @@ export default function App() {
       const parsedAmount = parseFloat(amount.replace(',', '.'));
       const weiAmount = ethToWei(parsedAmount);
       
-      console.log("Calling writeContract with:", {
-        address: CONTRACT_ADDRESS,
-        functionName: 'create_warranty',
-        args: [policyUrl, productInfo, duration.toString()],
-        value: weiAmount,
-        account: account
-      });
-      
+      const combinedProductInfo = `Product: ${productInfo}
+Serial: ${serialNumber || 'N/A'}
+Category: ${category}
+Customer: ${customerAddress || 'N/A'}`;
+
       const { hash } = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'create_warranty',
-        args: [policyUrl, productInfo, duration.toString()],
+        args: [policyUrl, combinedProductInfo, duration.toString()],
         value: weiAmount
       } as any);
       await client.waitForTransactionReceipt({ hash });
@@ -659,17 +660,50 @@ export default function App() {
                     <label className="input-label">Product Name / Description</label>
                     <input className="input-field" required value={productInfo} onChange={e => setProductInfo(e.target.value)} placeholder="e.g. MacBook Pro M3 Max" />
                   </div>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                    <div className="input-group" style={{ marginBottom: 0 }}>
+                      <label className="input-label">Serial Number / IMEI</label>
+                      <input className="input-field" value={serialNumber} onChange={e => setSerialNumber(e.target.value)} placeholder="e.g. C02X..." />
+                    </div>
+                    <div className="input-group" style={{ marginBottom: 0 }}>
+                      <label className="input-label">Category</label>
+                      <select className="input-field" value={category} onChange={e => setCategory(e.target.value)}>
+                        <option value="Electronics">Electronics</option>
+                        <option value="Automotive">Automotive</option>
+                        <option value="Appliances">Appliances</option>
+                        <option value="Real Estate">Real Estate</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="input-group">
+                    <label className="input-label">Customer Wallet / Email (Optional)</label>
+                    <input className="input-field" value={customerAddress} onChange={e => setCustomerAddress(e.target.value)} placeholder="0x... or user@email.com" />
+                  </div>
+
                   <div className="input-group">
                     <label className="input-label">Warranty Policy (Public URL)</label>
                     <input className="input-field" type="url" required value={policyUrl} onChange={e => setPolicyUrl(e.target.value)} placeholder="https://example.com/policy.txt" />
                   </div>
-                  <div className="input-group">
-                    <label className="input-label">Locked Deposit (GEN)</label>
-                    <input className="input-field" type="number" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)} placeholder="10.5" />
-                  </div>
-                  <div className="input-group" style={{ marginBottom: '2rem' }}>
-                    <label className="input-label">Duration (Seconds)</label>
-                    <input className="input-field" type="number" required value={duration} onChange={e => setDuration(e.target.value)} />
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
+                    <div className="input-group" style={{ marginBottom: 0 }}>
+                      <label className="input-label">Locked Deposit (GEN)</label>
+                      <input className="input-field" type="number" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)} placeholder="10.5" />
+                    </div>
+                    <div className="input-group" style={{ marginBottom: 0 }}>
+                      <label className="input-label">Duration</label>
+                      <select className="input-field" required value={duration} onChange={e => setDuration(e.target.value)}>
+                        <option value="2592000">1 Month</option>
+                        <option value="15552000">6 Months</option>
+                        <option value="31536000">1 Year</option>
+                        <option value="63072000">2 Years</option>
+                        <option value="94608000">3 Years</option>
+                        <option value="157680000">5 Years</option>
+                      </select>
+                    </div>
                   </div>
                   <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.75rem' }}>Create Warranty & Lock Funds</button>
                 </form>
