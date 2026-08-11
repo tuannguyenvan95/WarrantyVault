@@ -152,8 +152,7 @@ export default function App() {
         address: CONTRACT_ADDRESS,
         functionName: 'create_warranty',
         args: [policyUrl, productInfo, duration.toString()],
-        value: weiAmount,
-        account: account
+        value: weiAmount
       } as any);
       await client.waitForTransactionReceipt({ hash });
       setSuccessMsg("Warranty created successfully!");
@@ -181,8 +180,7 @@ export default function App() {
       const { hash } = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'file_claim',
-        args: [activeWarrantyId, claimDesc, evidenceUrl],
-        account: account
+        args: [activeWarrantyId, claimDesc, evidenceUrl]
       } as any);
       await client.waitForTransactionReceipt({ hash });
       setSuccessMsg("Claim filed successfully!");
@@ -204,8 +202,7 @@ export default function App() {
       const { hash } = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'adjudicate_claim',
-        args: [claimId],
-        account: account
+        args: [claimId]
       } as any);
       await client.waitForTransactionReceipt({ hash });
       setSuccessMsg("Adjudication completed!");
@@ -226,8 +223,7 @@ export default function App() {
       const { hash } = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'release_escalated_funds',
-        args: [claimId],
-        account: account
+        args: [claimId]
       } as any);
       await client.waitForTransactionReceipt({ hash });
       setSuccessMsg("Escalated funds released! 50/50 split applied.");
