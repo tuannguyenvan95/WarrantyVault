@@ -715,17 +715,84 @@ export default function App() {
         )}
       </main>
       
-      {/* Footer */}
-      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: 'auto' }}>
-        <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-          <p>© 2026 WarrantyVault. Secured by GenLayer Validators.</p>
-          <div style={{ display: 'flex', gap: '1.5rem' }}>
-            <a href="https://github.com/tuannguyenvan95/WarrantyVault" target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)' }}>
-              GitHub
-            </a>
-            <a href="#" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)' }}>
-              Documentation
-            </a>
+      {/* VIP Footer */}
+      <footer style={{ 
+        borderTop: '1px solid rgba(255,255,255,0.05)', 
+        background: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.5))',
+        padding: '4rem 2rem 2rem', 
+        marginTop: 'auto',
+        color: 'var(--text-secondary)' 
+      }}>
+        <div className="container" style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+            gap: '3rem',
+            marginBottom: '3rem'
+          }}>
+            {/* Branding Column */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                <Icons.Shield style={{ color: 'var(--accent-color)', width: 28, height: 28 }} />
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }} className="text-gradient">WarrantyVault</h2>
+              </div>
+              <p style={{ lineHeight: 1.6, fontSize: '0.95rem', opacity: 0.8, marginBottom: '1.5rem' }}>
+                The next-generation smart warranty platform powered by GenLayer. 
+                Securing physical and digital products with AI-driven dispute resolution and decentralized escrow.
+              </p>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <a href="https://github.com/tuannguyenvan95/WarrantyVault" target="_blank" rel="noreferrer" className="btn btn-secondary" style={{ padding: '0.5rem', borderRadius: '50%' }} title="GitHub">
+                  <Icons.Github style={{ width: 20, height: 20 }} />
+                </a>
+                <a href="#" className="btn btn-secondary" style={{ padding: '0.5rem', borderRadius: '50%' }} title="Twitter">
+                  <Icons.Twitter style={{ width: 20, height: 20 }} />
+                </a>
+              </div>
+            </div>
+
+            {/* Quick Links */}
+            <div>
+              <h3 style={{ color: 'var(--text-primary)', fontSize: '1.1rem', fontWeight: 600, marginBottom: '1.5rem' }}>Quick Links</h3>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <li><a href="#" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color='var(--accent-color)'} onMouseOut={e => e.currentTarget.style.color='inherit'}>Dashboard Overview</a></li>
+                <li><a href="#" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color='var(--accent-color)'} onMouseOut={e => e.currentTarget.style.color='inherit'}>Create Smart Warranty</a></li>
+                <li><a href="#" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color='var(--accent-color)'} onMouseOut={e => e.currentTarget.style.color='inherit'}>File a Claim</a></li>
+                <li><a href="#" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color='var(--accent-color)'} onMouseOut={e => e.currentTarget.style.color='inherit'}>GenLayer Explorer</a></li>
+              </ul>
+            </div>
+
+            {/* Technology */}
+            <div>
+              <h3 style={{ color: 'var(--text-primary)', fontSize: '1.1rem', fontWeight: 600, marginBottom: '1.5rem' }}>Technology</h3>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <li>
+                  <a href="https://genlayer.com" target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color='var(--accent-color)'} onMouseOut={e => e.currentTarget.style.color='inherit'}>
+                    <Icons.Layers style={{ width: 16, height: 16 }} /> GenLayer Intelligent Contracts
+                  </a>
+                </li>
+                <li>
+                  <a href="#" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.currentTarget.style.color='var(--accent-color)'} onMouseOut={e => e.currentTarget.style.color='inherit'}>
+                    <Icons.Brain style={{ width: 16, height: 16 }} /> LLM Equivalence Principle
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div style={{ 
+            borderTop: '1px solid rgba(255,255,255,0.05)', 
+            paddingTop: '2rem', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            flexWrap: 'wrap', 
+            gap: '1rem',
+            fontSize: '0.85rem'
+          }}>
+            <p style={{ margin: 0 }}>© 2026 WarrantyVault. All rights reserved.</p>
+            <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              Built with <Icons.Heart style={{ width: 14, height: 14, color: '#ff4b4b' }} /> for the GenLayer Hackathon
+            </p>
           </div>
         </div>
       </footer>
