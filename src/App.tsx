@@ -84,7 +84,7 @@ export default function App() {
       setClaims(Object.values(claimsObj));
     } catch (err: any) {
       console.error(err);
-      setErrorMsg("Failed to fetch data from contract.");
+      setErrorMsg(`Failed to fetch data from contract: ${err?.message || err}`);
     } finally {
       setLoading(false);
     }
