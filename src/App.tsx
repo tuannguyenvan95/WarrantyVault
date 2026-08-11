@@ -400,7 +400,7 @@ export default function App() {
                           </div>
                           <div>
                             <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Total Value Locked</p>
-                            <h3 style={{ fontSize: '1.75rem', fontWeight: 700 }}>{warranties.reduce((acc, w) => acc + parseFloat(weiToEth(w.locked_amount)), 0).toFixed(2)} GEN</h3>
+                            <h3 style={{ fontSize: '1.75rem', fontWeight: 700 }}>{warranties.reduce((acc, w) => acc + weiToEth(w.locked_amount), 0).toFixed(2)} GEN</h3>
                           </div>
                         </div>
                         <div className="card glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem' }}>
