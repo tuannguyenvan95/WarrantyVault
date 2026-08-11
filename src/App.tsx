@@ -952,8 +952,8 @@ Customer: ${customerAddress || 'N/A'}`;
             {/* Branding Column */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                <Icons.Shield style={{ color: 'var(--accent-color)', width: 28, height: 28 }} />
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }} className="text-gradient">WarrantyVault</h2>
+                <Icons.Layers style={{ color: 'var(--text-primary)', width: 24, height: 24 }} />
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>About the Project</h3>
               </div>
               <p style={{ lineHeight: 1.6, fontSize: '0.95rem', opacity: 0.8, marginBottom: '1.5rem' }}>
                 The next-generation smart warranty platform powered by GenLayer. 
