@@ -32,7 +32,15 @@ export default function App() {
     
     if (typeof window !== 'undefined' && (window as any).ethereum) {
       (window as any).ethereum.request({ method: 'eth_accounts' }).then((accounts: string[]) => {
-        if (accounts.length > 0) setAccount(accounts[0]);
+        if (accounts.length > 0) {
+          setAccount(accounts[0]);
+          const newClient = createClient({
+            chain: studionet,
+            provider: (window as any).ethereum,
+            account: accounts[0]
+          } as any);
+          setClient(newClient);
+        }
       }).catch(console.error);
     }
   }, []);
@@ -112,8 +120,9 @@ export default function App() {
         address: CONTRACT_ADDRESS,
         functionName: 'create_warranty',
         args: [policyUrl, productInfo, duration.toString()],
-        value: weiAmount
-      });
+        value: weiAmount,
+        account: account
+      } as any);
       await client.waitForTransactionReceipt({ hash });
       setSuccessMsg("Warranty created successfully!");
       setTimeout(() => setSuccessMsg(null), 5000);
@@ -140,8 +149,9 @@ export default function App() {
       const { hash } = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'file_claim',
-        args: [activeWarrantyId, claimDesc, evidenceUrl]
-      });
+        args: [activeWarrantyId, claimDesc, evidenceUrl],
+        account: account
+      } as any);
       await client.waitForTransactionReceipt({ hash });
       setSuccessMsg("Claim filed successfully!");
       setTimeout(() => setSuccessMsg(null), 5000);
@@ -162,8 +172,9 @@ export default function App() {
       const { hash } = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'adjudicate_claim',
-        args: [claimId]
-      });
+        args: [claimId],
+        account: account
+      } as any);
       await client.waitForTransactionReceipt({ hash });
       setSuccessMsg("Adjudication completed!");
       setTimeout(() => setSuccessMsg(null), 5000);
@@ -183,8 +194,9 @@ export default function App() {
       const { hash } = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'release_escalated_funds',
-        args: [claimId]
-      });
+        args: [claimId],
+        account: account
+      } as any);
       await client.waitForTransactionReceipt({ hash });
       setSuccessMsg("Escalated funds released! 50/50 split applied.");
       setTimeout(() => setSuccessMsg(null), 5000);
