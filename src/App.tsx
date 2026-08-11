@@ -6,11 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formatExpiryTime, canReleaseEscalated, getClaimBadgeClass, getClaimBadgeText, formatAddress, weiToEth, ethToWei } from './helpers';
 import './index.css';
 
-const rawEnv = import.meta.env.VITE_CONTRACT_ADDRESS;
-// If the env var is literally the string "undefined", empty, or not starting with 0x, fallback to the known deployed address
-const CONTRACT_ADDRESS = (rawEnv && rawEnv !== 'undefined' && rawEnv.startsWith('0x')) 
-  ? rawEnv 
-  : "0x5057Ad3C8fB7A41e99F9D960A1E242caFcd907Ff";
+const CONTRACT_ADDRESS = "0x5057Ad3C8fB7A41e99F9D960A1E242caFcd907Ff";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -134,9 +130,24 @@ export default function App() {
   const handleCreateWarranty = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!client || !account) return;
+    
+    // Debugging logs
+    console.log("CONTRACT_ADDRESS", CONTRACT_ADDRESS);
+    console.log("account", account);
+    
     try {
       setLoading(true);
-      const weiAmount = ethToWei(parseFloat(amount));
+      const parsedAmount = parseFloat(amount.replace(',', '.'));
+      const weiAmount = ethToWei(parsedAmount);
+      
+      console.log("Calling writeContract with:", {
+        address: CONTRACT_ADDRESS,
+        functionName: 'create_warranty',
+        args: [policyUrl, productInfo, duration.toString()],
+        value: weiAmount,
+        account: account
+      });
+      
       const { hash } = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'create_warranty',
