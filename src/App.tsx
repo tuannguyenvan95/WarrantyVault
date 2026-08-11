@@ -5,6 +5,7 @@ import { Icons } from './utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatExpiryTime, canReleaseEscalated, getClaimBadgeClass, getClaimBadgeText, formatAddress, weiToEth, ethToWei } from './helpers';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { QRCodeCanvas } from 'qrcode.react';
 import './index.css';
 
 const CONTRACT_ADDRESS = "0x5057Ad3C8fB7A41e99F9D960A1E242caFcd907Ff";
@@ -34,6 +35,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'create' | 'claims' | 'analytics'>('dashboard');
   const [selectedWarranty, setSelectedWarranty] = useState<any | null>(null);
   const [filterWarrantyId, setFilterWarrantyId] = useState<string>('all');
+  
+  const [userRole, setUserRole] = useState<'RETAILER' | 'CUSTOMER'>('RETAILER');
+  const [newWarrantyId, setNewWarrantyId] = useState<string | null>(null);
 
   useEffect(() => {
     const initClient = createClient({
@@ -161,6 +165,7 @@ Customer: ${customerAddress || 'N/A'}`;
       } as any);
       await client.waitForTransactionReceipt({ hash });
       setSuccessMsg("Warranty created successfully!");
+      setNewWarrantyId(productInfo);
       setTimeout(() => setSuccessMsg(null), 5000);
       setActiveTab('dashboard');
       fetchWarranties();
@@ -299,12 +304,84 @@ Customer: ${customerAddress || 'N/A'}`;
         </div>
         <div>
           {!account ? (
-            <button className="btn btn-primary" onClick={connectWallet}>
-              <Icons.Wallet style={{ marginRight: '0.5rem', width: 16, height: 16 }} />
-              Connect Wallet
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              {/* Role Toggle */}
+              <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.2)', borderRadius: '999px', padding: '0.25rem', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <button 
+                  onClick={() => setUserRole('RETAILER')}
+                  style={{ 
+                    padding: '0.25rem 0.75rem', 
+                    borderRadius: '999px', 
+                    fontSize: '0.75rem', 
+                    fontWeight: 600,
+                    background: userRole === 'RETAILER' ? 'var(--accent-color)' : 'transparent',
+                    color: userRole === 'RETAILER' ? '#fff' : 'var(--text-secondary)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  🏢 Retailer
+                </button>
+                <button 
+                  onClick={() => { setUserRole('CUSTOMER'); setActiveTab('dashboard'); }}
+                  style={{ 
+                    padding: '0.25rem 0.75rem', 
+                    borderRadius: '999px', 
+                    fontSize: '0.75rem', 
+                    fontWeight: 600,
+                    background: userRole === 'CUSTOMER' ? 'var(--accent-color)' : 'transparent',
+                    color: userRole === 'CUSTOMER' ? '#fff' : 'var(--text-secondary)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  🧑 Customer
+                </button>
+              </div>
+              <button className="btn btn-primary" onClick={connectWallet}>
+                <Icons.Wallet style={{ marginRight: '0.5rem', width: 16, height: 16 }} />
+                Connect Wallet
+              </button>
+            </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              {/* Role Toggle */}
+              <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.2)', borderRadius: '999px', padding: '0.25rem', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <button 
+                  onClick={() => setUserRole('RETAILER')}
+                  style={{ 
+                    padding: '0.25rem 0.75rem', 
+                    borderRadius: '999px', 
+                    fontSize: '0.75rem', 
+                    fontWeight: 600,
+                    background: userRole === 'RETAILER' ? 'var(--accent-color)' : 'transparent',
+                    color: userRole === 'RETAILER' ? '#fff' : 'var(--text-secondary)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  🏢 Retailer
+                </button>
+                <button 
+                  onClick={() => { setUserRole('CUSTOMER'); setActiveTab('dashboard'); }}
+                  style={{ 
+                    padding: '0.25rem 0.75rem', 
+                    borderRadius: '999px', 
+                    fontSize: '0.75rem', 
+                    fontWeight: 600,
+                    background: userRole === 'CUSTOMER' ? 'var(--accent-color)' : 'transparent',
+                    color: userRole === 'CUSTOMER' ? '#fff' : 'var(--text-secondary)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  🧑 Customer
+                </button>
+              </div>
               <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.05)', padding: '0.5rem 1rem', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.1)' }}>
                 {formatAddress(account)}
               </span>
@@ -335,6 +412,28 @@ Customer: ${customerAddress || 'N/A'}`;
           </AnimatePresence>
         </div>
 
+        {/* QR Code Modal */}
+        <AnimatePresence>
+          {newWarrantyId && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <motion.div initial={{ y: 50, scale: 0.9 }} animate={{ y: 0, scale: 1 }} exit={{ y: 50, scale: 0.9 }} className="card glass-panel" style={{ width: '100%', maxWidth: '400px', textAlign: 'center', padding: '3rem 2rem' }}>
+                <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+                  <Icons.Check style={{ width: '32px', height: '32px', color: 'var(--success-color)' }} />
+                </div>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Warranty Created</h2>
+                <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Scan this QR code to view the warranty on-chain.</p>
+                <div style={{ background: '#fff', padding: '1.5rem', borderRadius: 'var(--radius-lg)', display: 'inline-block', marginBottom: '2rem', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+                  <QRCodeCanvas value={`warrantyvault://warranty/${encodeURIComponent(newWarrantyId)}`} size={200} />
+                </div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '2rem' }}>{newWarrantyId}</h3>
+                <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setNewWarrantyId(null)}>
+                  Close
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {!CONTRACT_ADDRESS ? (
           <div className="card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
             <Icons.AlertTriangle style={{ margin: '0 auto 1rem', width: 48, height: 48, color: 'var(--warning-color)' }} />
@@ -356,10 +455,14 @@ Customer: ${customerAddress || 'N/A'}`;
             {/* Tabs */}
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', overflowX: 'auto', whiteSpace: 'nowrap' }}>
               <button className={`btn ${activeTab === 'dashboard' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('dashboard')}>Dashboard</button>
-              <button className={`btn ${activeTab === 'analytics' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('analytics')}>
-                <Icons.Brain style={{ width: 16, height: 16, marginRight: '0.5rem', display: 'inline' }} /> Vault Analytics
-              </button>
-              <button className={`btn ${activeTab === 'create' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('create')}>Create Warranty</button>
+              {userRole === 'RETAILER' && (
+                <>
+                  <button className={`btn ${activeTab === 'analytics' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('analytics')}>
+                    <Icons.Brain style={{ width: 16, height: 16, marginRight: '0.5rem', display: 'inline' }} /> Vault Analytics
+                  </button>
+                  <button className={`btn ${activeTab === 'create' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('create')}>Create Warranty</button>
+                </>
+              )}
               <button className={`btn ${activeTab === 'claims' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('claims')}>Claims</button>
             </div>
 
@@ -459,40 +562,42 @@ Customer: ${customerAddress || 'N/A'}`;
                 ) : (
                   // Warranties Grid
                   <motion.div variants={containerVariants} initial="hidden" animate="show">
-                    <div style={{ marginBottom: '3rem' }}>
-                      <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Vault Overview</h2>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
-                        <div className="card glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem' }}>
-                          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Icons.Shield style={{ color: 'var(--accent-color)', width: 24, height: 24 }} />
+                    {userRole === 'RETAILER' && (
+                      <div style={{ marginBottom: '3rem' }}>
+                        <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Vault Overview</h2>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+                          <div className="card glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem' }}>
+                            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Icons.Shield style={{ color: 'var(--accent-color)', width: 24, height: 24 }} />
+                            </div>
+                            <div>
+                              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Total Warranties</p>
+                              <h3 style={{ fontSize: '1.75rem', fontWeight: 700 }}>{warranties.length}</h3>
+                            </div>
                           </div>
-                          <div>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Total Warranties</p>
-                            <h3 style={{ fontSize: '1.75rem', fontWeight: 700 }}>{warranties.length}</h3>
+                          <div className="card glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem' }}>
+                            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Icons.Wallet style={{ color: 'var(--success-color)', width: 24, height: 24 }} />
+                            </div>
+                            <div>
+                              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Total Value Locked</p>
+                              <h3 style={{ fontSize: '1.75rem', fontWeight: 700 }}>{warranties.reduce((acc, w) => acc + weiToEth(w.locked_amount), 0).toFixed(2)} GEN</h3>
+                            </div>
                           </div>
-                        </div>
-                        <div className="card glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem' }}>
-                          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Icons.Wallet style={{ color: 'var(--success-color)', width: 24, height: 24 }} />
-                          </div>
-                          <div>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Total Value Locked</p>
-                            <h3 style={{ fontSize: '1.75rem', fontWeight: 700 }}>{warranties.reduce((acc, w) => acc + weiToEth(w.locked_amount), 0).toFixed(2)} GEN</h3>
-                          </div>
-                        </div>
-                        <div className="card glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem' }}>
-                          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(139, 92, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Icons.Brain style={{ color: 'var(--warning-color)', width: 24, height: 24 }} />
-                          </div>
-                          <div>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Pending Claims</p>
-                            <h3 style={{ fontSize: '1.75rem', fontWeight: 700 }}>{claims.filter(c => c.status === 'PENDING').length}</h3>
+                          <div className="card glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '1.5rem' }}>
+                            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(139, 92, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Icons.Brain style={{ color: 'var(--warning-color)', width: 24, height: 24 }} />
+                            </div>
+                            <div>
+                              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>Pending Claims</p>
+                              <h3 style={{ fontSize: '1.75rem', fontWeight: 700 }}>{claims.filter(c => c.status === 'PENDING').length}</h3>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
+                    )}
 
-                    <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>All Warranties</h2>
+                    <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>{userRole === 'RETAILER' ? 'All Warranties' : 'My Warranties'}</h2>
                     {warranties.length === 0 ? (
                       <div style={{ textAlign: 'center', padding: '4rem 2rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-lg)', border: '1px dashed var(--border-color)' }}>
                         <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
@@ -878,51 +983,80 @@ Customer: ${customerAddress || 'N/A'}`;
                           </div>
                         )}
 
-                        {c.status === "PENDING" && (
-                          <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
-                            <button className="btn btn-primary" onClick={() => handleAdjudicate(c.id.toString())}>
-                              <Icons.Brain style={{ width: 16, height: 16, marginRight: '0.5rem' }} /> Adjudicate Claim via AI
-                            </button>
-                            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-                              This will trigger a nondeterministic consensus mechanism on GenLayer.
-                            </p>
+                        {/* Audit Trail Timeline */}
+                        <div className="audit-timeline" style={{ marginTop: '1.5rem', position: 'relative', paddingLeft: '1.5rem', borderLeft: '2px solid rgba(255,255,255,0.1)' }}>
+                          {/* Step 1: Submitted */}
+                          <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
+                            <div style={{ position: 'absolute', left: '-1.85rem', top: '0', width: '12px', height: '12px', borderRadius: '50%', background: 'var(--success-color)' }}></div>
+                            <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 0.25rem' }}>Claim Submitted</h4>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>Evidence provided via IPFS.</p>
                           </div>
-                        )}
+                          
+                          {/* Step 2: Adjudication */}
+                          <div style={{ position: 'relative', marginBottom: c.status === 'PENDING' ? '0' : '1.5rem' }}>
+                            <div style={{ position: 'absolute', left: '-1.85rem', top: '0', width: '12px', height: '12px', borderRadius: '50%', background: c.status === 'PENDING' ? 'var(--warning-color)' : 'var(--success-color)' }}></div>
+                            <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 0.25rem' }}>GenLayer Nondeterministic AI</h4>
+                            {c.status === 'PENDING' ? (
+                              <>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0 0 0.75rem' }}>Awaiting validator consensus to fetch evidence and execute LLM equivalence logic.</p>
+                                {userRole === 'RETAILER' ? (
+                                  <button className="btn btn-primary" onClick={() => handleAdjudicate(c.id.toString())} style={{ padding: '0.5rem 1rem', fontSize: '0.75rem' }}>
+                                    <Icons.Brain style={{ width: 14, height: 14, marginRight: '0.5rem', display: 'inline' }} /> Trigger AI Adjudication
+                                  </button>
+                                ) : (
+                                  <p style={{ fontSize: '0.75rem', color: 'var(--warning-color)' }}>Awaiting Retailer to trigger adjudication.</p>
+                                )}
+                              </>
+                            ) : (
+                              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>Consensus reached. Evidence analyzed.</p>
+                            )}
+                          </div>
 
-                        {c.status === "ADJUDICATED" && (
-                          <div style={{ marginTop: '1rem', background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: 'var(--radius-md)', borderLeft: `3px solid var(--${c.verdict === 'COVERED' ? 'success' : c.verdict === 'REJECTED' ? 'danger' : c.verdict === 'PARTIAL' ? 'accent' : 'warning'}-color)` }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                              <strong style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Icons.Brain style={{ width: 16, height: 16 }} /> AI Reasoning
-                              </strong>
-                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Confidence: {c.confidence.toString()}%</span>
-                            </div>
-                            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{c.reason}</p>
-                            
-                            {/* ESCALATE Release Button */}
-                            {c.verdict === 'ESCALATE' && (() => {
-                              const { canRelease, timeRemaining } = canReleaseEscalated(c);
-                              return (
-                                <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
-                                  {canRelease ? (
-                                    <>
-                                      <button className="btn btn-primary" onClick={() => handleReleaseEscalated(c.id.toString())} style={{ width: '100%' }}>
-                                        <Icons.Shield style={{ width: 16, height: 16, marginRight: '0.5rem' }} /> Release Escalated Funds (50/50 Split)
-                                      </button>
-                                      <p style={{ fontSize: '0.75rem', color: 'var(--success-color)', marginTop: '0.5rem' }}>
-                                        ✓ 7-day timeout reached. Funds can be released (50% to claimer, 50% to creator).
-                                      </p>
-                                    </>
-                                  ) : (
-                                    <p style={{ fontSize: '0.875rem', color: 'var(--warning-color)' }}>
-                                      ⏳ ESCALATE timeout: {formatExpiryTime(String(Math.floor(Date.now() / 1000) + timeRemaining)).text} until funds can be released.
-                                    </p>
-                                  )}
+                          {/* Step 3: Verdict */}
+                          {c.status !== 'PENDING' && (
+                            <div style={{ position: 'relative' }}>
+                              <div style={{ position: 'absolute', left: '-1.85rem', top: '0', width: '12px', height: '12px', borderRadius: '50%', background: `var(--${c.verdict === 'COVERED' ? 'success' : c.verdict === 'REJECTED' ? 'danger' : c.verdict === 'PARTIAL' ? 'accent' : 'warning'}-color)` }}></div>
+                              <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                AI Verdict: <span className={`badge badge-${c.verdict.toLowerCase()}`}>{c.verdict}</span>
+                              </h4>
+                              
+                              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: 'var(--radius-md)', borderLeft: `3px solid var(--${c.verdict === 'COVERED' ? 'success' : c.verdict === 'REJECTED' ? 'danger' : c.verdict === 'PARTIAL' ? 'accent' : 'warning'}-color)` }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                  <strong style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem' }}>
+                                    <Icons.Brain style={{ width: 14, height: 14 }} /> Reasoning Log
+                                  </strong>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Confidence: {c.confidence.toString()}%</span>
                                 </div>
-                              );
-                            })()}
-                          </div>
-                        )}
+                                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>{c.reason}</p>
+                              </div>
+
+                              {/* ESCALATE Release Button */}
+                              {c.verdict === 'ESCALATE' && (() => {
+                                const { canRelease, timeRemaining } = canReleaseEscalated(c);
+                                return (
+                                  <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                                    {canRelease ? (
+                                      <>
+                                        {userRole === 'RETAILER' && (
+                                          <button className="btn btn-primary" onClick={() => handleReleaseEscalated(c.id.toString())} style={{ width: '100%', marginBottom: '0.5rem' }}>
+                                            <Icons.Shield style={{ width: 16, height: 16, marginRight: '0.5rem' }} /> Release Escalated Funds (50/50 Split)
+                                          </button>
+                                        )}
+                                        <p style={{ fontSize: '0.75rem', color: 'var(--success-color)', margin: 0 }}>
+                                          ✓ 7-day timeout reached. Funds can be released.
+                                        </p>
+                                      </>
+                                    ) : (
+                                      <p style={{ fontSize: '0.875rem', color: 'var(--warning-color)', margin: 0 }}>
+                                        ⏳ ESCALATE timeout: {formatExpiryTime(String(Math.floor(Date.now() / 1000) + timeRemaining)).text} until funds can be released.
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          )}
+                        </div>
                       </motion.div>
                       );
                     })}
