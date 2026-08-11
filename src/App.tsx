@@ -290,7 +290,7 @@ Customer: ${customerAddress || 'N/A'}`;
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" style={{ display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <header className="glass-panel" style={{ borderRadius: 0, borderTop: 0, borderLeft: 0, borderRight: 0, padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -317,7 +317,7 @@ Customer: ${customerAddress || 'N/A'}`;
       </header>
 
       {/* Main Content */}
-      <main className="container" style={{ marginTop: '2rem', paddingBottom: '4rem' }}>
+      <main className="container" style={{ flex: 1, marginTop: '2rem', paddingBottom: '4rem', width: '100%' }}>
         
         {/* Toasts */}
         <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -526,8 +526,13 @@ Customer: ${customerAddress || 'N/A'}`;
                                   {w.status}
                                 </span>
                               </div>
-                              <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', fontWeight: 600 }}>{w.product_info}</h3>
-                              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                              <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', fontWeight: 600 }}>{w.product_info.split('\n')[0].replace('Product: ', '')}</h3>
+                              {w.product_info.includes('\n') && (
+                                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', whiteSpace: 'pre-line', opacity: 0.8 }}>
+                                  {w.product_info.split('\n').slice(1).join('\n')}
+                                </p>
+                              )}
+                              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', marginTop: '1rem' }}>
                                 <a href={w.policy_url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} onClick={e => e.stopPropagation()}>
                                   Policy Link <Icons.ExternalLink style={{ width: 14, height: 14 }} />
                                 </a>
@@ -802,7 +807,7 @@ Customer: ${customerAddress || 'N/A'}`;
                       <option value="all">All Warranties</option>
                       {warranties.map(w => (
                         <option key={w.id.toString()} value={w.id.toString()}>
-                          #{w.id.toString()} - {w.product_info.substring(0, 30)}
+                          #{w.id.toString()} - {w.product_info.split('\n')[0].replace('Product: ', '').substring(0, 30)}
                         </option>
                       ))}
                     </select>
@@ -844,7 +849,7 @@ Customer: ${customerAddress || 'N/A'}`;
                           <div>
                             <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'block' }}>Claim ID: {c.id.toString()}</span>
                             <span style={{ fontSize: '0.875rem', color: 'var(--accent-color)', cursor: 'pointer' }} onClick={() => { setFilterWarrantyId(c.warranty_id.toString()); }}>
-                              Warranty #{c.warranty_id.toString()}{associatedWarranty ? ` - ${associatedWarranty.product_info.substring(0, 30)}` : ''}
+                              Warranty #{c.warranty_id.toString()}{associatedWarranty ? ` - ${associatedWarranty.product_info.split('\n')[0].replace('Product: ', '').substring(0, 30)}` : ''}
                             </span>
                             {expiryInfo && (
                               <span style={{ fontSize: '0.75rem', color: expiryInfo.isExpired ? 'var(--danger-color)' : 'var(--success-color)', display: 'block', marginTop: '0.25rem' }}>
