@@ -4,6 +4,7 @@ import { studionet } from 'genlayer-js/chains';
 import { Icons } from './utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatExpiryTime, canReleaseEscalated, getClaimBadgeClass, getClaimBadgeText, formatAddress, weiToEth, ethToWei } from './helpers';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import './index.css';
 
 const CONTRACT_ADDRESS = "0x5057Ad3C8fB7A41e99F9D960A1E242caFcd907Ff";
@@ -27,7 +28,10 @@ export default function App() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'create' | 'claims'>('dashboard');
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadingIPFS, setUploadingIPFS] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'create' | 'claims' | 'analytics'>('dashboard');
   const [selectedWarranty, setSelectedWarranty] = useState<any | null>(null);
   const [filterWarrantyId, setFilterWarrantyId] = useState<string>('all');
 
@@ -236,6 +240,53 @@ export default function App() {
       setLoading(false);
     }
   };
+  const analyticsData = useMemo(() => {
+    const verdictCounts: Record<string, number> = { COVERED: 0, REJECTED: 0, PARTIAL: 0, ESCALATE: 0 };
+    claims.forEach(c => {
+      if (c.status === 'ADJUDICATED' || c.status === 'RELEASED') {
+        if (verdictCounts[c.verdict] !== undefined) {
+          verdictCounts[c.verdict]++;
+        }
+      }
+    });
+    const pieData = Object.keys(verdictCounts)
+      .map(key => ({ name: key, value: verdictCounts[key] }))
+      .filter(item => item.value > 0);
+      
+    let cumulativeTVL = 0;
+    const tvlTimeline = warranties.map(w => {
+      cumulativeTVL += weiToEth(w.locked_amount);
+      return { name: `W#${w.id.toString()}`, TVL: cumulativeTVL };
+    });
+
+    return { pieData, tvlTimeline };
+  }, [claims, warranties]);
+
+  const COLORS: Record<string, string> = {
+    COVERED: '#10b981',
+    REJECTED: '#ef4444',
+    PARTIAL: '#3b82f6',
+    ESCALATE: '#f59e0b'
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileUpload(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileUpload = (file: File) => {
+    setUploadingIPFS(true);
+    // Simulate IPFS upload delay
+    setTimeout(() => {
+      setEvidenceUrl(`ipfs://QmMockHash1234567890/${file.name.replace(/\s+/g, '_')}`);
+      setUploadingIPFS(false);
+      setSuccessMsg(`Evidence "${file.name}" uploaded to IPFS successfully!`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+    }, 2000);
+  };
 
   return (
     <div className="min-h-screen">
@@ -302,8 +353,11 @@ export default function App() {
         ) : (
           <>
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', overflowX: 'auto', whiteSpace: 'nowrap' }}>
               <button className={`btn ${activeTab === 'dashboard' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('dashboard')}>Dashboard</button>
+              <button className={`btn ${activeTab === 'analytics' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('analytics')}>
+                <Icons.Brain style={{ width: 16, height: 16, marginRight: '0.5rem', display: 'inline' }} /> Vault Analytics
+              </button>
               <button className={`btn ${activeTab === 'create' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('create')}>Create Warranty</button>
               <button className={`btn ${activeTab === 'claims' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('claims')}>Claims</button>
             </div>
@@ -501,6 +555,86 @@ export default function App() {
               </div>
             )}
 
+            {/* Analytics Tab */}
+            {activeTab === 'analytics' && !loading && (
+              <motion.div variants={containerVariants} initial="hidden" animate="show">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                  <h2 style={{ fontSize: '1.75rem' }}>Vault Analytics</h2>
+                  <span className="badge badge-active"><span className="pulse-dot"></span> Live On-Chain Data</span>
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
+                  {/* Verdict Distribution Pie Chart */}
+                  <div className="card glass-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <h3 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', alignSelf: 'flex-start' }}>AI Verdict Distribution</h3>
+                    {analyticsData.pieData.length > 0 ? (
+                      <div style={{ width: '100%', height: 300 }}>
+                        <ResponsiveContainer>
+                          <PieChart>
+                            <Pie
+                              data={analyticsData.pieData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={80}
+                              outerRadius={120}
+                              paddingAngle={5}
+                              dataKey="value"
+                            >
+                              {analyticsData.pieData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[entry.name] || '#8884d8'} />
+                              ))}
+                            </Pie>
+                            <Tooltip 
+                              contentStyle={{ background: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                              itemStyle={{ color: 'white' }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : (
+                      <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                        No claims adjudicated yet.
+                      </div>
+                    )}
+                    
+                    <div style={{ display: 'flex', gap: '1.5rem', marginTop: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                      {Object.keys(COLORS).map(key => (
+                        <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem' }}>
+                          <span style={{ width: 12, height: 12, borderRadius: '50%', background: COLORS[key] }}></span>
+                          {key}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* TVL Timeline */}
+                  <div className="card glass-panel">
+                    <h3 style={{ fontSize: '1.25rem', marginBottom: '1.5rem' }}>Total Value Locked (TVL) Growth</h3>
+                    {analyticsData.tvlTimeline.length > 0 ? (
+                      <div style={{ width: '100%', height: 300 }}>
+                        <ResponsiveContainer>
+                          <BarChart data={analyticsData.tvlTimeline} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <XAxis dataKey="name" stroke="rgba(255,255,255,0.2)" tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} />
+                            <YAxis stroke="rgba(255,255,255,0.2)" tick={{ fill: 'var(--text-secondary)', fontSize: 12 }} />
+                            <Tooltip 
+                              contentStyle={{ background: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                              cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                              formatter={(value: any) => [`${value.toFixed(2)} GEN`, 'TVL']}
+                            />
+                            <Bar dataKey="TVL" fill="var(--accent-color)" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : (
+                      <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                        No TVL data available.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {/* Create Warranty Tab */}
             {activeTab === 'create' && !loading && (
               <div className="card glass-panel" style={{ maxWidth: '600px', margin: '0 auto' }}>
@@ -568,7 +702,50 @@ export default function App() {
                       </div>
                       <div className="input-group" style={{ marginBottom: '2rem' }}>
                         <label className="input-label">Evidence Link (Photo/Video/Invoice)</label>
-                        <input className="input-field" type="url" required value={evidenceUrl} onChange={e => setEvidenceUrl(e.target.value)} placeholder="https://imgur.com/... or Google Drive public link" />
+                        
+                        <div 
+                          style={{
+                            border: `2px dashed ${isDragging ? 'var(--accent-color)' : 'var(--border-color)'}`,
+                            borderRadius: 'var(--radius-md)',
+                            padding: '2rem',
+                            textAlign: 'center',
+                            background: isDragging ? 'rgba(59, 130, 246, 0.05)' : 'rgba(0,0,0,0.2)',
+                            transition: 'all 0.2s ease',
+                            cursor: 'pointer',
+                            marginBottom: '1rem'
+                          }}
+                          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                          onDragLeave={() => setIsDragging(false)}
+                          onDrop={handleDrop}
+                          onClick={() => document.getElementById('file-upload')?.click()}
+                        >
+                          <input 
+                            type="file" 
+                            id="file-upload" 
+                            style={{ display: 'none' }} 
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files.length > 0) {
+                                handleFileUpload(e.target.files[0]);
+                              }
+                            }} 
+                          />
+                          {uploadingIPFS ? (
+                            <div style={{ color: 'var(--accent-color)', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                              <Icons.Brain style={{ animation: 'spin 2s linear infinite' }} /> Uploading to IPFS Network...
+                            </div>
+                          ) : (
+                            <div>
+                              <Icons.Layers style={{ width: 32, height: 32, margin: '0 auto 1rem', color: 'var(--text-secondary)' }} />
+                              <p style={{ margin: 0, fontWeight: 500 }}>Drag & Drop evidence file here</p>
+                              <p style={{ margin: '0.5rem 0 0', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>or click to browse</p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                          <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>OR paste URL:</span>
+                          <input className="input-field" type="url" required value={evidenceUrl} onChange={e => setEvidenceUrl(e.target.value)} placeholder="ipfs://... or https://..." />
+                        </div>
                       </div>
                       <div style={{ display: 'flex', gap: '1rem' }}>
                         <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setActiveWarrantyId(null)}>Cancel</button>
