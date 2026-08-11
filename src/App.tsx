@@ -417,7 +417,22 @@ export default function App() {
             {/* Create Warranty Tab */}
             {activeTab === 'create' && !loading && (
               <div className="card glass-panel" style={{ maxWidth: '600px', margin: '0 auto' }}>
-                <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Create Smart Warranty</h2>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                  <h2 style={{ fontSize: '1.5rem' }}>Create Smart Warranty</h2>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}
+                    onClick={() => {
+                      setProductInfo("MacBook Pro M3 Max (2023)");
+                      setPolicyUrl("https://raw.githubusercontent.com/tuannguyenvan95/WarrantyVault/master/README.md");
+                      setAmount("10.5");
+                      setDuration("31536000");
+                    }}
+                  >
+                    ✨ Fill Demo Data
+                  </button>
+                </div>
                 <form onSubmit={handleCreateWarranty}>
                   <div className="input-group">
                     <label className="input-label">Product Name / Description</label>
@@ -445,7 +460,20 @@ export default function App() {
               <div>
                 {activeWarrantyId && (
                   <div className="card glass-panel" style={{ maxWidth: '600px', margin: '0 auto 2rem' }}>
-                    <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>File Claim for Warranty #{activeWarrantyId}</h2>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                      <h2 style={{ fontSize: '1.5rem' }}>File Claim for Warranty #{activeWarrantyId}</h2>
+                      <button 
+                        type="button" 
+                        className="btn btn-secondary" 
+                        style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}
+                        onClick={() => {
+                          setClaimDesc("My MacBook Pro screen cracked unexpectedly while I was using it. There was no physical impact or drop.");
+                          setEvidenceUrl("https://raw.githubusercontent.com/tuannguyenvan95/WarrantyVault/master/src/assets/hero.png");
+                        }}
+                      >
+                        ✨ Fill Demo Data
+                      </button>
+                    </div>
                     <form onSubmit={handleFileClaim}>
                       <div className="input-group">
                         <label className="input-label">Description of Issue</label>
