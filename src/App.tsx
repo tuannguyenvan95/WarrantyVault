@@ -72,6 +72,15 @@ export default function App() {
     }
   };
 
+  const disconnectWallet = () => {
+    setAccount(null);
+    const newClient = createClient({
+      chain: studionet,
+      provider: typeof window !== 'undefined' ? (window as any).ethereum : undefined
+    });
+    setClient(newClient);
+  };
+
   const fetchWarranties = useCallback(async () => {
     if (!CONTRACT_ADDRESS || !client) return;
     try {
@@ -234,9 +243,12 @@ export default function App() {
             </button>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+              <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.05)', padding: '0.5rem 1rem', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.1)' }}>
                 {formatAddress(account)}
               </span>
+              <button className="btn btn-secondary" onClick={disconnectWallet} style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }} title="Disconnect Wallet">
+                Disconnect
+              </button>
             </div>
           )}
         </div>
