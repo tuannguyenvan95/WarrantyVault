@@ -6,8 +6,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formatExpiryTime, canReleaseEscalated, getClaimBadgeClass, getClaimBadgeText, formatAddress, weiToEth, ethToWei } from './helpers';
 import './index.css';
 
-// We will let user paste their contract address or use VITE_CONTRACT_ADDRESS
-const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "";
+const rawEnv = import.meta.env.VITE_CONTRACT_ADDRESS;
+// If the env var is literally the string "undefined", empty, or not starting with 0x, fallback to the known deployed address
+const CONTRACT_ADDRESS = (rawEnv && rawEnv !== 'undefined' && rawEnv.startsWith('0x')) 
+  ? rawEnv 
+  : "0x5057Ad3C8fB7A41e99F9D960A1E242caFcd907Ff";
 
 const containerVariants = {
   hidden: { opacity: 0 },
