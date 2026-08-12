@@ -164,7 +164,7 @@ Serial: ${serialNumber || 'N/A'}
 Category: ${category}
 Customer: ${customerAddress || 'N/A'}`;
 
-      const { hash } = await client.writeContract({
+      const hash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'create_warranty',
         args: [policyUrl, combinedProductInfo, duration.toString()],
@@ -197,7 +197,7 @@ Customer: ${customerAddress || 'N/A'}`;
     if (!client || !account || !activeWarrantyId) return;
     try {
       setLoading(true);
-      const { hash } = await client.writeContract({
+      const hash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'file_claim',
         args: [activeWarrantyId, claimDesc, evidenceUrl]
@@ -222,7 +222,7 @@ Customer: ${customerAddress || 'N/A'}`;
     if (!client || !account) return;
     try {
       setLoading(true);
-      const { hash } = await client.writeContract({
+      const hash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'adjudicate_claim',
         args: [claimId]
@@ -246,7 +246,7 @@ Customer: ${customerAddress || 'N/A'}`;
     if (!client || !account) return;
     try {
       setLoading(true);
-      const { hash } = await client.writeContract({
+      const hash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'release_escalated_funds',
         args: [claimId]
