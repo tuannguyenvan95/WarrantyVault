@@ -170,7 +170,10 @@ Customer: ${customerAddress || 'N/A'}`;
         args: [policyUrl, combinedProductInfo, duration.toString()],
         value: weiAmount
       } as any);
-      await client.waitForTransactionReceipt({ hash });
+      await client.waitForTransactionReceipt({ 
+        hash,
+        timeout: 120_000 // 2 minutes timeout for studionet
+      });
       setSuccessMsg("Warranty created successfully!");
       setNewWarrantyId(productInfo);
       setTimeout(() => setSuccessMsg(null), 5000);
@@ -199,7 +202,10 @@ Customer: ${customerAddress || 'N/A'}`;
         functionName: 'file_claim',
         args: [activeWarrantyId, claimDesc, evidenceUrl]
       } as any);
-      await client.waitForTransactionReceipt({ hash });
+      await client.waitForTransactionReceipt({ 
+        hash,
+        timeout: 120_000 
+      });
       setSuccessMsg("Claim filed successfully!");
       setTimeout(() => setSuccessMsg(null), 5000);
       setActiveWarrantyId(null);
@@ -221,7 +227,10 @@ Customer: ${customerAddress || 'N/A'}`;
         functionName: 'adjudicate_claim',
         args: [claimId]
       } as any);
-      await client.waitForTransactionReceipt({ hash });
+      await client.waitForTransactionReceipt({ 
+        hash,
+        timeout: 120_000 
+      });
       setSuccessMsg("Adjudication completed!");
       setTimeout(() => setSuccessMsg(null), 5000);
       fetchWarranties();
@@ -242,7 +251,10 @@ Customer: ${customerAddress || 'N/A'}`;
         functionName: 'release_escalated_funds',
         args: [claimId]
       } as any);
-      await client.waitForTransactionReceipt({ hash });
+      await client.waitForTransactionReceipt({ 
+        hash,
+        timeout: 120_000 
+      });
       setSuccessMsg("Escalated funds released! 50/50 split applied.");
       setTimeout(() => setSuccessMsg(null), 5000);
       fetchWarranties();
