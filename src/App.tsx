@@ -170,10 +170,11 @@ Customer: ${customerAddress || 'N/A'}`;
         args: [policyUrl, combinedProductInfo, duration.toString()],
         value: weiAmount
       } as any);
-      await client.waitForTransactionReceipt({ 
+      const receipt = await client.waitForTransactionReceipt({ 
         hash,
         timeout: 120_000 // 2 minutes timeout for studionet
       });
+      if (receipt.status === 'reverted') throw new Error("Transaction reverted by the network.");
       setSuccessMsg("Warranty created successfully!");
       setNewWarrantyId(productInfo);
       setTimeout(() => setSuccessMsg(null), 5000);
@@ -202,10 +203,11 @@ Customer: ${customerAddress || 'N/A'}`;
         functionName: 'file_claim',
         args: [activeWarrantyId, claimDesc, evidenceUrl]
       } as any);
-      await client.waitForTransactionReceipt({ 
+      const receipt = await client.waitForTransactionReceipt({ 
         hash,
         timeout: 120_000 
       });
+      if (receipt.status === 'reverted') throw new Error("Transaction reverted by the network.");
       setSuccessMsg("Claim filed successfully!");
       setTimeout(() => setSuccessMsg(null), 5000);
       setActiveWarrantyId(null);
@@ -227,10 +229,11 @@ Customer: ${customerAddress || 'N/A'}`;
         functionName: 'adjudicate_claim',
         args: [claimId]
       } as any);
-      await client.waitForTransactionReceipt({ 
+      const receipt = await client.waitForTransactionReceipt({ 
         hash,
         timeout: 120_000 
       });
+      if (receipt.status === 'reverted') throw new Error("Transaction reverted by the network.");
       setSuccessMsg("Adjudication completed!");
       setTimeout(() => setSuccessMsg(null), 5000);
       fetchWarranties();

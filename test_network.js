@@ -1,7 +1,7 @@
 import { createClient } from 'genlayer-js';
 import { studionet } from 'genlayer-js/chains';
 
-const CONTRACT_ADDRESS = "0x5057Ad3C8fB7A41e99F9D960A1E242caFcd907Ff";
+const CONTRACT_ADDRESS = "0xB8751CddC3B83d070F648C85FE6A40439c4915A6";
 
 async function test() {
   console.log("Initializing client...");
@@ -10,16 +10,15 @@ async function test() {
   });
 
   try {
-    console.log("Fetching total warranties...");
-    const totalWarrantiesStr = await client.readContract({
+    console.log("Simulating get_all_warranties...");
+    const res = await client.readContract({
       address: CONTRACT_ADDRESS,
-      functionName: 'get_total_warranties',
+      functionName: 'get_all_warranties',
       args: []
     });
-    console.log("Total warranties:", totalWarrantiesStr);
-    console.log("✅ Network connection successful!");
+    console.log("Simulation Result:", res);
   } catch (error) {
-    console.error("❌ Error testing GenLayer network:", error);
+    console.error("❌ Simulation Failed:", error.shortMessage || error.message);
   }
 }
 
