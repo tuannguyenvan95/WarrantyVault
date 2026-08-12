@@ -1,12 +1,19 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createClient } from 'genlayer-js';
-import { studionet } from 'genlayer-js/chains';
+import { studionet as originalStudionet } from 'genlayer-js/chains';
 import { Icons } from './utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatExpiryTime, canReleaseEscalated, getClaimBadgeClass, getClaimBadgeText, formatAddress, weiToEth, ethToWei } from './helpers';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { QRCodeCanvas } from 'qrcode.react';
 import './index.css';
+
+const studionet = {
+  ...originalStudionet,
+  rpcUrls: {
+    default: { http: ['/api/genlayer'] }
+  }
+};
 
 const CONTRACT_ADDRESS = "0x5057Ad3C8fB7A41e99F9D960A1E242caFcd907Ff";
 
