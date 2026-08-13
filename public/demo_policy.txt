@@ -1,0 +1,16 @@
+WARRANTY POLICY FOR MACBOOK PRO M3 MAX
+
+1. HARDWARE COVERAGE
+- Covered: Screen cracking due to spontaneous thermal stress or manufacturer defect.
+- Not Covered: Screen cracking due to physical impact, dropping, or customer negligence.
+- Covered: Battery swelling or failing to hold charge within 1 year.
+- Covered: Keyboard malfunctioning without liquid damage.
+
+2. CLAIM PROCESS
+- Customer must provide a clear photograph or video of the damage.
+- The GenLayer AI will evaluate if the damage appears to be from physical impact or a defect.
+
+3. RESOLUTION
+- If covered: 100% full refund of the warranty locked amount.
+- If user negligence but partial fault (e.g., mixed cause): 50% refund.
+- If totally customer fault (e.g., dropped on the floor): Claim rejected.

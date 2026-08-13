@@ -816,7 +816,7 @@ Customer: ${customerAddress || 'N/A'}`;
                       setSerialNumber("C02XQ0ABCDEF");
                       setCategory("Electronics");
                       setCustomerAddress("0x742d35Cc6634C0532925a3b844Bc454e4438f44e");
-                      setPolicyUrl("https://raw.githubusercontent.com/tuannguyenvan95/WarrantyVault/master/README.md");
+                      setPolicyUrl("https://warrantyvault-rosy.vercel.app/demo_policy.txt");
                       setAmount("10.5");
                       setDuration("31536000");
                     }}
