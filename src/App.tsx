@@ -151,6 +151,11 @@ export default function App() {
   useEffect(() => {
     if (account && CONTRACT_ADDRESS) {
       fetchWarranties();
+      // Auto-refresh data every 10 seconds
+      const interval = setInterval(() => {
+        fetchWarranties();
+      }, 10000);
+      return () => clearInterval(interval);
     }
   }, [account, client, fetchWarranties]);
 
