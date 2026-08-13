@@ -135,10 +135,10 @@ export default function App() {
     setClient(newClient);
   };
 
-  const fetchWarranties = useCallback(async () => {
+  const fetchWarranties = useCallback(async (quiet = false) => {
     if (!CONTRACT_ADDRESS || !client) return;
     try {
-      setLoading(true);
+      if (!quiet) setLoading(true);
       const res: any = await client.readContract({
         address: CONTRACT_ADDRESS,
         functionName: 'get_all_warranties',
@@ -158,16 +158,29 @@ export default function App() {
       setClaims(claimsList);
     } catch (err: any) {
       console.error(err);
-      setErrorMsg(`Failed to fetch data from contract: ${err?.message || err}`);
+      if (!quiet) {
+        setErrorMsg(`Failed to fetch data from contract: ${err?.message || err}`);
+      }
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   }, [client]);
 
   useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    
     if (account && CONTRACT_ADDRESS) {
+      // Initial fetch
       fetchWarranties();
+      
+      // Set up polling every 5 seconds for real-time updates
+      intervalId = setInterval(() => {
+        // We only want to fetch data silently without setting loading=true
+        fetchWarranties(true);
+      }, 5000);
     }
+    
+    return () => clearInterval(intervalId);
   }, [account, client, fetchWarranties]);
 
   // Filtered claims based on selected warranty
