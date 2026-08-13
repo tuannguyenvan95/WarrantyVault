@@ -130,7 +130,7 @@ export default function App() {
         functionName: 'get_all_warranties',
         args: []
       });
-      const warrantiesObj = typeof res === 'string' && res.trim() ? JSON.parse(res) : {};
+      const warrantiesObj = typeof res === 'string' ? (res.trim() ? JSON.parse(res) : {}) : (res || {});
       setWarranties(Object.values(warrantiesObj));
       
       const claimsRes: any = await client.readContract({
@@ -138,7 +138,7 @@ export default function App() {
         functionName: 'get_all_claims',
         args: []
       });
-      const claimsObj = typeof claimsRes === 'string' && claimsRes.trim() ? JSON.parse(claimsRes) : {};
+      const claimsObj = typeof claimsRes === 'string' ? (claimsRes.trim() ? JSON.parse(claimsRes) : {}) : (claimsRes || {});
       setClaims(Object.values(claimsObj));
     } catch (err: any) {
       console.error(err);
