@@ -241,3 +241,8 @@ a:hover {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+  
+/* AI Scan Overlay */  
+.ai-scan-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; background: rgba(139, 92, 246, 0.1); z-index: 10; overflow: hidden; }  
+.ai-scan-line { position: absolute; top: 0; left: 0; right: 0; height: 2px; background: #a78bfa; box-shadow: 0 0 10px 2px rgba(167, 139, 250, 0.8), 0 0 20px 5px rgba(139, 92, 246, 0.4); animation: scan-vertical 2.5s ease-in-out infinite alternate; }  
+@keyframes scan-vertical { 0%% { top: 0%%; opacity: 0.8; } 50%% { opacity: 1; } 100%% { top: 100%%; opacity: 0.8; } } 

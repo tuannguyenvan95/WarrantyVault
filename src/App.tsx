@@ -66,6 +66,20 @@ export default function App() {
         }
       }).catch(console.error);
     }
+
+    // Auto-navigate for QR code scanning
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const action = params.get('action');
+      const wid = params.get('warranty_id');
+      if (action === 'claim' && wid) {
+        setUserRole('CUSTOMER');
+        setActiveTab('claims');
+        setFilterWarrantyId(wid);
+        // Clean up URL so it doesn't get stuck
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
   }, []);
 
   const connectWallet = async () => {
@@ -304,9 +318,11 @@ Customer: ${customerAddress || 'N/A'}`;
     }
   };
   const analyticsData = useMemo(() => {
-    const verdictCounts: Record<string, number> = { COVERED: 0, REJECTED: 0, PARTIAL: 0, ESCALATE: 0 };
+    const verdictCounts: Record<string, number> = { COVERED: 0, REJECTED: 0, PARTIAL: 0, ESCALATE: 0, PENDING: 0 };
     claims.forEach(c => {
-      if (c.status === 'ADJUDICATED' || c.status === 'RELEASED') {
+      if (c.status === 'PENDING') {
+        verdictCounts['PENDING']++;
+      } else if (c.status === 'ADJUDICATED' || c.status === 'RELEASED') {
         if (verdictCounts[c.verdict] !== undefined) {
           verdictCounts[c.verdict]++;
         }
@@ -317,7 +333,7 @@ Customer: ${customerAddress || 'N/A'}`;
       .filter(item => item.value > 0);
       
     let cumulativeTVL = 0;
-    const tvlTimeline = warranties.map(w => {
+    const tvlTimeline = [...warranties].reverse().map(w => {
       cumulativeTVL += weiToEth(w.locked_amount);
       return { name: `W#${w.id.toString()}`, TVL: cumulativeTVL };
     });
@@ -329,7 +345,8 @@ Customer: ${customerAddress || 'N/A'}`;
     COVERED: '#10b981',
     REJECTED: '#ef4444',
     PARTIAL: '#3b82f6',
-    ESCALATE: '#f59e0b'
+    ESCALATE: '#f59e0b',
+    PENDING: '#a78bfa'
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -364,7 +381,14 @@ Customer: ${customerAddress || 'N/A'}`;
         }
 
         const data = await res.json();
-        const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${data.ipfsHash}`;
+        
+        // Append type hint to URL based on mime type
+        let typeHint = 'image';
+        if (file.type.startsWith('video/')) typeHint = 'video';
+        else if (file.type === 'application/pdf') typeHint = 'pdf';
+        
+        const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${data.ipfsHash}?type=${typeHint}`;
+        
         setEvidenceUrl(ipfsUrl);
         setSuccessMsg(`Evidence uploaded to IPFS successfully!`);
         setTimeout(() => setSuccessMsg(null), 3000);
@@ -613,11 +637,24 @@ Customer: ${customerAddress || 'N/A'}`;
                         </div>
                       </div>
 
-                      <div style={{ marginBottom: '2rem', background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
-                        <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: 'var(--text-secondary)' }}>Full Details</h3>
-                        <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.875rem', margin: 0, fontFamily: 'var(--font-sans)', lineHeight: 1.6 }}>
-                          {selectedWarranty.product_info}
-                        </pre>
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+                        <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                          <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: 'var(--text-secondary)' }}>Full Details</h3>
+                          <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.875rem', margin: 0, fontFamily: 'var(--font-sans)', lineHeight: 1.6 }}>
+                            {selectedWarranty.product_info}
+                          </pre>
+                        </div>
+                        <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                          <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: 'var(--text-secondary)' }}>Quick Claim QR</h3>
+                          <div style={{ background: 'white', padding: '0.5rem', borderRadius: '8px' }}>
+                            <QRCodeCanvas 
+                              value={`${window.location.origin}/?action=claim&warranty_id=${selectedWarranty.id.toString()}`}
+                              size={120}
+                              level="H"
+                            />
+                          </div>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '1rem', textAlign: 'center' }}>Scan to file a claim instantly</p>
+                        </div>
                       </div>
 
                       <div style={{ marginBottom: '2rem' }}>
@@ -1078,17 +1115,33 @@ Customer: ${customerAddress || 'N/A'}`;
                               {c.evidence_urls.split(',').filter((url: string) => url.trim()).map((url: string, i: number) => {
                                 const cleanUrl = url.trim();
                                 const renderUrl = cleanUrl.startsWith('ipfs://') ? cleanUrl.replace('ipfs://', 'https://ipfs.io/ipfs/') : cleanUrl;
-                                const isImage = /\.(jpeg|jpg|gif|png|webp)$/i.test(renderUrl.split('?')[0]) || renderUrl.includes('hero.png') || renderUrl.includes('ipfs');
+                                const isVideo = cleanUrl.includes('type=video');
+                                const isPdf = cleanUrl.includes('type=pdf');
+                                const isImage = !isVideo && !isPdf;
                                 
-                                return isImage ? (
-                                  <a key={i} href={renderUrl} target="_blank" rel="noreferrer" style={{ display: 'block', width: '200px', height: '150px', overflow: 'hidden', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', position: 'relative' }}>
-                                    <img src={renderUrl} alt={`Evidence ${i+1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', padding: '0.25rem', fontSize: '0.7rem', textAlign: 'center' }}>Click to expand</div>
-                                  </a>
-                                ) : (
-                                  <a key={i} href={renderUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.875rem', background: 'rgba(255,255,255,0.05)', padding: '0.25rem 0.75rem', borderRadius: '99px' }}>
-                                    Link {i+1} <Icons.ExternalLink style={{ width: 12, height: 12 }} />
-                                  </a>
+                                return (
+                                  <div key={i} style={{ width: '100%', maxWidth: '400px', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', position: 'relative' }}>
+                                    {isVideo ? (
+                                      <video controls src={renderUrl} style={{ width: '100%', display: 'block' }} />
+                                    ) : isPdf ? (
+                                      <iframe src={renderUrl} style={{ width: '100%', height: '300px', border: 'none', display: 'block' }} title={`Evidence ${i+1}`} />
+                                    ) : isImage ? (
+                                      <a href={renderUrl} target="_blank" rel="noreferrer" style={{ display: 'block' }}>
+                                        <img src={renderUrl} alt={`Evidence ${i+1}`} style={{ width: '100%', objectFit: 'contain', display: 'block' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', padding: '0.25rem', fontSize: '0.7rem', textAlign: 'center', pointerEvents: 'none' }}>Click to expand</div>
+                                      </a>
+                                    ) : (
+                                      <a href={renderUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.875rem', padding: '1rem' }}>
+                                        Open Link <Icons.ExternalLink style={{ width: 12, height: 12 }} />
+                                      </a>
+                                    )}
+                                    {/* AI Scan Animation Overlay for Pending Claims */}
+                                    {c.status === 'PENDING' && (
+                                      <div className="ai-scan-overlay">
+                                        <div className="ai-scan-line"></div>
+                                      </div>
+                                    )}
+                                  </div>
                                 );
                               })}
                             </div>
