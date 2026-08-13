@@ -357,53 +357,51 @@ Customer: ${customerAddress || 'N/A'}`;
     }
   };
 
-  const handleFileUpload = (file: File) => {
+  const handleFileUpload = async (file: File) => {
     setUploadingIPFS(true);
     setErrorMsg(null);
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const fileBase64 = reader.result as string;
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            fileBase64,
-            fileName: file.name,
-            mimeType: file.type
-          })
-        });
+    try {
+      // 1. Fetch JWT from backend to avoid exposing it in frontend code directly
+      const jwtRes = await fetch('/api/jwt');
+      if (!jwtRes.ok) throw new Error('Failed to fetch upload credentials');
+      const { jwt } = await jwtRes.json();
 
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || `Upload failed with status ${res.status}`);
-        }
+      // 2. Direct upload to Pinata using FormData (bypasses Vercel 4.5MB limit)
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const pinataRes = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${jwt}`
+        },
+        body: formData
+      });
 
-        const data = await res.json();
-        
-        // Append type hint to URL based on mime type
-        let typeHint = 'image';
-        if (file.type.startsWith('video/')) typeHint = 'video';
-        else if (file.type === 'application/pdf') typeHint = 'pdf';
-        
-        const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${data.ipfsHash}?type=${typeHint}`;
-        
-        setEvidenceUrl(ipfsUrl);
-        setSuccessMsg(`Evidence uploaded to IPFS successfully!`);
-        setTimeout(() => setSuccessMsg(null), 3000);
-      } catch (err: any) {
-        console.error(err);
-        setErrorMsg(`IPFS Upload Failed: ${err.message}`);
-      } finally {
-        setUploadingIPFS(false);
+      if (!pinataRes.ok) {
+        const errorText = await pinataRes.text();
+        throw new Error(`Pinata upload failed: ${errorText}`);
       }
-    };
-    reader.onerror = () => {
+
+      const data = await pinataRes.json();
+      
+      // Append type hint to URL based on mime type
+      let typeHint = 'image';
+      if (file.type.startsWith('video/')) typeHint = 'video';
+      else if (file.type === 'application/pdf') typeHint = 'pdf';
+      
+      const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}?type=${typeHint}`;
+      
+      setEvidenceUrl(ipfsUrl);
+      setSuccessMsg(`Evidence uploaded to IPFS successfully!`);
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(`IPFS Upload Failed: ${err.message}`);
+    } finally {
       setUploadingIPFS(false);
-      setErrorMsg('Failed to read file locally.');
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   return (
