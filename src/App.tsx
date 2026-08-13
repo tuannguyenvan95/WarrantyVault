@@ -15,7 +15,7 @@ const studionet = {
   }
 };
 
-const CONTRACT_ADDRESS = "0x13Bf1771827997d82fce0D97F46c400141c04205";
+const CONTRACT_ADDRESS = "0x5443C7633B1A85F680D045e21f2C507CDCF24928";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -71,6 +71,32 @@ export default function App() {
   const connectWallet = async () => {
     try {
       if (!(window as any).ethereum) throw new Error('MetaMask is required');
+      
+      // Try to switch to GenLayer Studionet
+      try {
+        await (window as any).ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0xf22f' }], // 61999 in hex
+        });
+      } catch (switchError: any) {
+        // If the network is not added to MetaMask
+        if (switchError.code === 4902) {
+          await (window as any).ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [
+              {
+                chainId: '0xf22f',
+                chainName: 'GenLayer Studionet',
+                rpcUrls: ['https://studio.genlayer.com/api'],
+                nativeCurrency: { name: 'GEN', symbol: 'GEN', decimals: 18 },
+              },
+            ],
+          });
+        } else {
+          throw switchError;
+        }
+      }
+
       const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
       setAccount(accounts[0]);
       
@@ -174,7 +200,9 @@ Customer: ${customerAddress || 'N/A'}`;
         hash,
         timeout: 120_000 // 2 minutes timeout for studionet
       });
-      if (receipt.status === 'reverted') throw new Error("Transaction reverted by the network.");
+      if (receipt.status === 'reverted' || receipt.status === 7 || receipt.status === 0 || String(receipt.status) === '0x0' || String(receipt.status) === '0x7') {
+        throw new Error("Transaction was reverted by the GenLayer network! Please check your input or GEN balance.");
+      }
       setSuccessMsg("Warranty created successfully!");
       setNewWarrantyId(productInfo);
       setTimeout(() => setSuccessMsg(null), 5000);
@@ -207,7 +235,9 @@ Customer: ${customerAddress || 'N/A'}`;
         hash,
         timeout: 120_000 
       });
-      if (receipt.status === 'reverted') throw new Error("Transaction reverted by the network.");
+      if (receipt.status === 'reverted' || receipt.status === 7 || receipt.status === 0 || String(receipt.status) === '0x0' || String(receipt.status) === '0x7') {
+        throw new Error("Transaction was reverted by the network.");
+      }
       setSuccessMsg("Claim filed successfully!");
       setTimeout(() => setSuccessMsg(null), 5000);
       setActiveWarrantyId(null);
@@ -445,7 +475,7 @@ Customer: ${customerAddress || 'N/A'}`;
                 <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Warranty Created</h2>
                 <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>Scan this QR code to view the warranty on-chain.</p>
                 <div style={{ background: '#fff', padding: '1.5rem', borderRadius: 'var(--radius-lg)', display: 'inline-block', marginBottom: '2rem', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
-                  <QRCodeCanvas value={`warrantyvault://warranty/${encodeURIComponent(newWarrantyId)}`} size={200} />
+                  <QRCodeCanvas value={`https://warrantyvault.app/verify/${encodeURIComponent(newWarrantyId)}`} size={200} />
                 </div>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '2rem' }}>{newWarrantyId}</h3>
                 <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setNewWarrantyId(null)}>
