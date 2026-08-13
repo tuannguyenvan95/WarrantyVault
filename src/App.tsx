@@ -543,9 +543,11 @@ Customer: ${customerAddress || 'N/A'}`;
                       ← Back to Dashboard
                     </button>
                     <div className="card glass-panel" style={{ maxWidth: '800px', margin: '0 auto' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                        <h2 style={{ fontSize: '1.75rem', fontWeight: 700 }}>{selectedWarranty.product_info}</h2>
-                        <span className={`badge badge-${selectedWarranty.status.toLowerCase()}`}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', gap: '1rem' }}>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: 700, margin: 0, wordBreak: 'break-word' }}>
+                          {selectedWarranty.product_info.split('\n')[0].replace('Product: ', '')}
+                        </h2>
+                        <span className={`badge badge-${selectedWarranty.status.toLowerCase()}`} style={{ flexShrink: 0 }}>
                           {selectedWarranty.status === 'ACTIVE' && <span className="pulse-dot"></span>}
                           {selectedWarranty.status}
                         </span>
@@ -577,6 +579,13 @@ Customer: ${customerAddress || 'N/A'}`;
                         </div>
                       </div>
 
+                      <div style={{ marginBottom: '2rem', background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem', color: 'var(--text-secondary)' }}>Full Details</h3>
+                        <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.875rem', margin: 0, fontFamily: 'var(--font-sans)', lineHeight: 1.6 }}>
+                          {selectedWarranty.product_info}
+                        </pre>
+                      </div>
+
                       <div style={{ marginBottom: '2rem' }}>
                         <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}>Warranty Policy</h3>
                         <a 
@@ -590,7 +599,7 @@ Customer: ${customerAddress || 'N/A'}`;
                       </div>
 
                       <div style={{ display: 'flex', gap: '1rem' }}>
-                        {selectedWarranty.status === 'ACTIVE' && (
+                        {selectedWarranty.status === 'ACTIVE' && userRole === 'CUSTOMER' && (
                           <button 
                             className="btn btn-primary" 
                             style={{ flex: 1, padding: '0.75rem' }}
@@ -706,7 +715,7 @@ Customer: ${customerAddress || 'N/A'}`;
                                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Locked Amount</span>
                                   <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent-color)' }}>{weiToEth(w.locked_amount)} GEN</span>
                                 </div>
-                                {w.status === "ACTIVE" && (
+                                {w.status === "ACTIVE" && userRole === 'CUSTOMER' && (
                                   <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); setActiveWarrantyId(w.id.toString()); setActiveTab('claims'); }}>
                                     File Claim
                                   </button>
