@@ -421,9 +421,21 @@ Customer: ${customerAddress || 'N/A'}`;
     <div className="min-h-screen" style={{ display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <header className="glass-panel" style={{ borderRadius: 0, borderTop: 0, borderLeft: 0, borderRight: 0, padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Icons.Shield style={{ color: 'var(--accent-color)' }} />
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 700 }} className="text-gradient">WarrantyVault</h1>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Icons.Shield style={{ color: 'var(--accent-color)' }} />
+            <h1 style={{ fontSize: '1.25rem', fontWeight: 700 }} className="text-gradient">WarrantyVault</h1>
+          </div>
+          {CONTRACT_ADDRESS && (
+            <a 
+              href={`https://studio.genlayer.com/contracts/${CONTRACT_ADDRESS}`}
+              target="_blank"
+              rel="noreferrer"
+              style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.25rem' }}
+            >
+              View on GenLayer Studio <Icons.ExternalLink style={{ width: 10, height: 10 }} />
+            </a>
+          )}
         </div>
         <div>
           {!account ? (
