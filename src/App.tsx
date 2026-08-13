@@ -649,11 +649,19 @@ Customer: ${customerAddress || 'N/A'}`;
                           <div style={{ background: 'white', padding: '0.5rem', borderRadius: '8px' }}>
                             <QRCodeCanvas 
                               value={`${window.location.origin}/?action=claim&warranty_id=${selectedWarranty.id.toString()}`}
-                              size={120}
+                              size={160}
                               level="H"
                             />
                           </div>
                           <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '1rem', textAlign: 'center' }}>Scan to file a claim instantly</p>
+                          <a 
+                            href={`${window.location.origin}/?action=claim&warranty_id=${selectedWarranty.id.toString()}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ fontSize: '0.7rem', color: 'var(--accent-color)', marginTop: '0.5rem', wordBreak: 'break-all', textAlign: 'center' }}
+                          >
+                            {`${window.location.origin}/?action=claim&warranty_id=${selectedWarranty.id.toString()}`}
+                          </a>
                         </div>
                       </div>
 
