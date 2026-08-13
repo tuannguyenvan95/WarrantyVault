@@ -167,7 +167,7 @@ export default function App() {
   }, [client]);
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
+    let intervalId: ReturnType<typeof setInterval>;
     
     if (account && CONTRACT_ADDRESS) {
       // Initial fetch
