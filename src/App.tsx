@@ -342,7 +342,9 @@ Customer: ${customerAddress || 'N/A'}`;
     setUploadingIPFS(true);
     // Simulate IPFS upload delay
     setTimeout(() => {
-      setEvidenceUrl(`ipfs://QmMockHash1234567890/${file.name.replace(/\s+/g, '_')}`);
+      // In a real app we'd upload to IPFS (e.g., Pinata).
+      // For this demo to work with the GenLayer AI validators, we must return a REAL public URL.
+      setEvidenceUrl("https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Broken_screen.jpg/800px-Broken_screen.jpg");
       setUploadingIPFS(false);
       setSuccessMsg(`Evidence "${file.name}" uploaded to IPFS successfully!`);
       setTimeout(() => setSuccessMsg(null), 3000);
@@ -902,7 +904,7 @@ Customer: ${customerAddress || 'N/A'}`;
                         style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}
                         onClick={() => {
                           setClaimDesc("My MacBook Pro screen cracked unexpectedly while I was using it. There was no physical impact or drop.");
-                          setEvidenceUrl("https://raw.githubusercontent.com/tuannguyenvan95/WarrantyVault/master/src/assets/hero.png");
+                          setEvidenceUrl("https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Broken_screen.jpg/800px-Broken_screen.jpg");
                         }}
                       >
                         ✨ Fill Demo Data
