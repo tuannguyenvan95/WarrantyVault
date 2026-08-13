@@ -211,13 +211,18 @@ export default function App() {
     
     try {
       setLoading(true);
+      
+      if (!customerAddress || customerAddress.length < 10) {
+        throw new Error("Valid Customer Address is required to create a warranty.");
+      }
+
       const parsedAmount = parseFloat(amount.replace(',', '.'));
       const weiAmount = ethToWei(parsedAmount);
       
       const combinedProductInfo = `Product: ${productInfo}
 Serial: ${serialNumber || 'N/A'}
 Category: ${category}
-Customer: ${customerAddress || 'N/A'}`;
+Customer: ${customerAddress}`;
 
       const durationSeconds = parseInt(duration);
       const expiryTimestamp = Math.floor(Date.now() / 1000) + durationSeconds;
@@ -225,7 +230,7 @@ Customer: ${customerAddress || 'N/A'}`;
       const hash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'create_warranty',
-        args: [policyUrl, combinedProductInfo, expiryTimestamp.toString(), weiAmount.toString()],
+        args: [customerAddress, policyUrl, combinedProductInfo, expiryTimestamp.toString(), weiAmount.toString()],
         value: BigInt(weiAmount)
       } as any);
       const receipt = await client.waitForTransactionReceipt({ 
