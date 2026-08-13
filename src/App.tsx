@@ -652,7 +652,7 @@ Customer: ${customerAddress || 'N/A'}`;
                     )}
 
                     <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>{userRole === 'RETAILER' ? 'All Warranties' : 'My Warranties'}</h2>
-                    {warranties.length === 0 ? (
+                    {warranties.length === 0 || (userRole === 'CUSTOMER' && warranties.filter(w => w.product_info.toLowerCase().includes(account!.toLowerCase())).length === 0) ? (
                       <div style={{ textAlign: 'center', padding: '4rem 2rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-lg)', border: '1px dashed var(--border-color)' }}>
                         <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
                           <Icons.Shield style={{ width: '32px', height: '32px', color: 'var(--accent-color)' }} />
@@ -661,13 +661,15 @@ Customer: ${customerAddress || 'N/A'}`;
                         <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', maxWidth: '400px', margin: '0 auto 2rem' }}>
                           Your vault is empty. Secure your first product by creating a smart warranty backed by GenLayer.
                         </p>
-                        <button className="btn btn-primary" onClick={() => setActiveTab('create')}>
-                          Create Warranty
-                        </button>
+                        {userRole === 'RETAILER' && (
+                          <button className="btn btn-primary" onClick={() => setActiveTab('create')}>
+                            Create Warranty
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
-                        {warranties.map((w, idx) => {
+                        {(userRole === 'RETAILER' ? warranties : warranties.filter(w => w.product_info.toLowerCase().includes(account!.toLowerCase()))).map((w, idx) => {
                           const expiryInfo = formatExpiryTime(w.expiry);
                           return (
                             <motion.div 
