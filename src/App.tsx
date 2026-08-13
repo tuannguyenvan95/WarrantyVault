@@ -131,7 +131,8 @@ export default function App() {
         args: []
       });
       const warrantiesObj = typeof res === 'string' ? (res.trim() ? JSON.parse(res) : {}) : (res || {});
-      setWarranties(Object.values(warrantiesObj));
+      const warrantiesList = Object.values(warrantiesObj).sort((a: any, b: any) => Number(b.id) - Number(a.id));
+      setWarranties(warrantiesList);
       
       const claimsRes: any = await client.readContract({
         address: CONTRACT_ADDRESS,
@@ -139,7 +140,8 @@ export default function App() {
         args: []
       });
       const claimsObj = typeof claimsRes === 'string' ? (claimsRes.trim() ? JSON.parse(claimsRes) : {}) : (claimsRes || {});
-      setClaims(Object.values(claimsObj));
+      const claimsList = Object.values(claimsObj).sort((a: any, b: any) => Number(b.id) - Number(a.id));
+      setClaims(claimsList);
     } catch (err: any) {
       console.error(err);
       setErrorMsg(`Failed to fetch data from contract: ${err?.message || err}`);
