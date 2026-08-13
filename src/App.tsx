@@ -230,7 +230,7 @@ Customer: ${customerAddress}`;
       const hash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'create_warranty',
-        args: [customerAddress, policyUrl, combinedProductInfo, expiryTimestamp.toString(), weiAmount.toString()],
+        args: [customerAddress, policyUrl, combinedProductInfo, expiryTimestamp.toString()],
         value: BigInt(weiAmount)
       } as any);
       const receipt = await client.waitForTransactionReceipt({ 
