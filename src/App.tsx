@@ -1041,11 +1041,24 @@ Customer: ${customerAddress || 'N/A'}`;
                         {c.evidence_urls && c.evidence_urls.length > 0 && (
                           <div style={{ marginBottom: '1.5rem' }}>
                             <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>Evidence:</span>
-                            {c.evidence_urls.split(',').filter((url: string) => url.trim()).map((url: string, i: number) => (
-                              <a key={i} href={url.trim()} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.875rem', background: 'rgba(255,255,255,0.05)', padding: '0.25rem 0.75rem', borderRadius: '99px', marginRight: '0.5rem', marginBottom: '0.5rem' }}>
-                                Link {i+1} <Icons.ExternalLink style={{ width: 12, height: 12 }} />
-                              </a>
-                            ))}
+                            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                              {c.evidence_urls.split(',').filter((url: string) => url.trim()).map((url: string, i: number) => {
+                                const cleanUrl = url.trim();
+                                const renderUrl = cleanUrl.startsWith('ipfs://') ? cleanUrl.replace('ipfs://', 'https://ipfs.io/ipfs/') : cleanUrl;
+                                const isImage = /\.(jpeg|jpg|gif|png|webp)$/i.test(renderUrl.split('?')[0]) || renderUrl.includes('hero.png') || renderUrl.includes('ipfs');
+                                
+                                return isImage ? (
+                                  <a key={i} href={renderUrl} target="_blank" rel="noreferrer" style={{ display: 'block', width: '200px', height: '150px', overflow: 'hidden', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', position: 'relative' }}>
+                                    <img src={renderUrl} alt={`Evidence ${i+1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', padding: '0.25rem', fontSize: '0.7rem', textAlign: 'center' }}>Click to expand</div>
+                                  </a>
+                                ) : (
+                                  <a key={i} href={renderUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.875rem', background: 'rgba(255,255,255,0.05)', padding: '0.25rem 0.75rem', borderRadius: '99px' }}>
+                                    Link {i+1} <Icons.ExternalLink style={{ width: 12, height: 12 }} />
+                                  </a>
+                                );
+                              })}
+                            </div>
                           </div>
                         )}
 
