@@ -342,15 +342,44 @@ Customer: ${customerAddress || 'N/A'}`;
 
   const handleFileUpload = (file: File) => {
     setUploadingIPFS(true);
-    // Simulate IPFS upload delay
-    setTimeout(() => {
-      // In a real app we'd upload to IPFS (e.g., Pinata).
-      // For this demo to work with the GenLayer AI validators, we must return a REAL public URL.
-      setEvidenceUrl("https://raw.githubusercontent.com/tuannguyenvan95/WarrantyVault/master/warrantyvault/src/assets/broken.jpg");
+    setErrorMsg(null);
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const fileBase64 = reader.result as string;
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileBase64,
+            fileName: file.name,
+            mimeType: file.type
+          })
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `Upload failed with status ${res.status}`);
+        }
+
+        const data = await res.json();
+        const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${data.ipfsHash}`;
+        setEvidenceUrl(ipfsUrl);
+        setSuccessMsg(`Evidence uploaded to IPFS successfully!`);
+        setTimeout(() => setSuccessMsg(null), 3000);
+      } catch (err: any) {
+        console.error(err);
+        setErrorMsg(`IPFS Upload Failed: ${err.message}`);
+      } finally {
+        setUploadingIPFS(false);
+      }
+    };
+    reader.onerror = () => {
       setUploadingIPFS(false);
-      setSuccessMsg(`Evidence "${file.name}" uploaded to IPFS successfully!`);
-      setTimeout(() => setSuccessMsg(null), 3000);
-    }, 2000);
+      setErrorMsg('Failed to read file locally.');
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
