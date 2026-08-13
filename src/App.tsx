@@ -428,7 +428,7 @@ Customer: ${customerAddress || 'N/A'}`;
           </div>
           {CONTRACT_ADDRESS && (
             <a 
-              href={`https://explorer.genlayer.com/address/${CONTRACT_ADDRESS}`}
+              href={`https://studio.genlayer.com/contracts/${CONTRACT_ADDRESS}`}
               target="_blank"
               rel="noreferrer"
               style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.25rem' }}
