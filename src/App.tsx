@@ -190,10 +190,13 @@ Serial: ${serialNumber || 'N/A'}
 Category: ${category}
 Customer: ${customerAddress || 'N/A'}`;
 
+      const durationSeconds = parseInt(duration);
+      const expiryTimestamp = Math.floor(Date.now() / 1000) + durationSeconds;
+
       const hash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'create_warranty',
-        args: [policyUrl, combinedProductInfo, duration.toString()],
+        args: [policyUrl, combinedProductInfo, expiryTimestamp.toString()],
         value: weiAmount
       } as any);
       const receipt = await client.waitForTransactionReceipt({ 
