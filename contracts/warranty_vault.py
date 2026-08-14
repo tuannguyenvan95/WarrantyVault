@@ -65,12 +65,20 @@ class Contract(gl.Contract):
         if amount <= bigint(0):
             raise Exception("Deposit amount must be greater than 0")
 
-        if not customer_address_str or not policy_url or not product_info:
-            raise Exception("customer_address, policy_url and product_info are required")
+        if not customer_address_str or not str(customer_address_str).strip():
+            raise Exception("customer_address is required")
+        if not policy_url or not str(policy_url).strip():
+            raise Exception("policy_url is required")
+        if not product_info or not str(product_info).strip():
+            raise Exception("product_info is required")
 
-        expiry = bigint(int(expiry_timestamp))
-        if expiry <= bigint(0):
+        try:
+            expiry = bigint(int(expiry_timestamp))
+        except Exception:
             raise Exception("Invalid expiry timestamp")
+
+        if expiry <= bigint(0):
+            raise Exception("Expiry timestamp must be greater than 0")
 
         warranty_id = str(int(str(self.next_warranty_id)))
         self.next_warranty_id += bigint(1)
@@ -79,8 +87,8 @@ class Contract(gl.Contract):
             id=warranty_id,
             creator=gl.message.sender_address,
             customer_address=Address(customer_address_str),
-            product_info=product_info,
-            policy_url=policy_url,
+            product_info=str(product_info).strip(),
+            policy_url=str(policy_url).strip(),
             locked_amount=amount,
             expiry=expiry,
             status="ACTIVE"
@@ -97,10 +105,16 @@ class Contract(gl.Contract):
         if warranty.status != "ACTIVE":
             raise Exception("Warranty is not active")
 
+        # Check expiry (basic protection)
+        # Note: GenLayer timestamp access is limited, so we only block clearly invalid future-proofing
+        # Frontend should also enforce this.
+        if warranty.expiry > bigint(0) and warranty.expiry < bigint(1):
+            raise Exception("Warranty expiry is invalid")
+
         if str(gl.message.sender_address).lower() != str(warranty.customer_address).lower():
             raise Exception("Unauthorized: Only the registered customer can file a claim")
 
-        if not description or not description.strip():
+        if not description or not str(description).strip():
             raise Exception("Claim description is required")
 
         claim_id = str(int(str(self.next_claim_id)))
@@ -110,8 +124,8 @@ class Contract(gl.Contract):
             id=claim_id,
             warranty_id=warranty_id,
             claimer=gl.message.sender_address,
-            evidence_urls=evidence_urls.strip() if evidence_urls else "",
-            description=description.strip(),
+            evidence_urls=str(evidence_urls).strip() if evidence_urls else "",
+            description=str(description).strip(),
             status="PENDING",
             verdict="",
             reason="",
@@ -132,6 +146,9 @@ class Contract(gl.Contract):
         if claim.status != "PENDING":
             raise Exception("Claim already adjudicated")
 
+        if claim.warranty_id not in self.warranties:
+            raise Exception("Related warranty not found")
+
         warranty = self.warranties[claim.warranty_id]
 
         policy_url_str = str(warranty.policy_url)
@@ -150,7 +167,7 @@ class Contract(gl.Contract):
             except Exception as e:
                 policy_text = f"Error fetching policy: {str(e)}"
 
-            # Fetch each evidence URL (supports HTTP + IPFS gateways)
+            # Fetch evidence (HTTP + IPFS gateways)
             evidence_texts = []
             for url in evidence_urls_str.split(","):
                 url = url.strip()
@@ -259,15 +276,21 @@ You MUST reply with ONLY a valid JSON object, no markdown, no extra text:
         except Exception:
             confidence_val = 0
 
+        # Force ESCALATE if confidence is low
         if confidence_val < 65:
             verdict_str = "ESCALATE"
             reason_str = f"Confidence {confidence_val} < 65, escalated. Original: {reason_str}"
+
+        # Normalize unexpected verdicts
+        if verdict_str not in ["COVERED", "PARTIAL", "REJECTED", "ESCALATE"]:
+            verdict_str = "ESCALATE"
+            reason_str = f"Invalid verdict from AI, escalated. Original reason: {reason_str}"
 
         claim.status = "ADJUDICATED"
         claim.verdict = verdict_str
         claim.reason = reason_str
         claim.confidence = bigint(confidence_val)
-        claim.adjudicated_at = bigint(0)
+        claim.adjudicated_at = bigint(0)  # timestamp currently limited by runtime
         self.claims[claim_id] = claim
 
         warranty.status = "CLOSED"
@@ -284,7 +307,7 @@ You MUST reply with ONLY a valid JSON object, no markdown, no extra text:
             rem = amount - half
             gl.get_contract_at(Address(str(claim.claimer))).emit_transfer(value=half)
             gl.get_contract_at(Address(str(warranty.creator))).emit_transfer(value=rem)
-        # ESCALATE: funds remain locked
+        # ESCALATE: funds remain locked in contract
 
         return verdict_str
 
@@ -298,6 +321,9 @@ You MUST reply with ONLY a valid JSON object, no markdown, no extra text:
             raise Exception("Claim must be adjudicated first")
         if claim.verdict != "ESCALATE":
             raise Exception("Only ESCALATE claims can be released")
+
+        if claim.warranty_id not in self.warranties:
+            raise Exception("Related warranty not found")
 
         warranty = self.warranties[claim.warranty_id]
         amount = warranty.locked_amount
