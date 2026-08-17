@@ -2,7 +2,7 @@ import { createClient } from 'genlayer-js';
 import { studionet } from 'genlayer-js/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 
-const CONTRACT_ADDRESS = '0xb9D9Ac4919cF40e84d5f056615508eD600462ec6';
+const CONTRACT_ADDRESS = '0x5bd7376FF1C39c1651eE216984B6939a8Ca0C0a9';
 const PRIVATE_KEY = '0x0909fe6b9b671281b871e56215874fc39897e155bbf8858207528c4cea883707';
 const account = privateKeyToAccount(PRIVATE_KEY);
 
