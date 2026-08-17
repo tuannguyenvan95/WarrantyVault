@@ -299,14 +299,14 @@ You MUST reply with ONLY a valid JSON object, no markdown, no extra text:
         amount = warranty.locked_amount
 
         if verdict_str == "COVERED":
-            gl.get_contract_at(Address(str(claim.claimer))).emit_transfer(value=amount)
+            gl.get_contract_at(Address(str(claim.claimer))).emit_transfer(value=u256(amount))
         elif verdict_str == "REJECTED":
-            gl.get_contract_at(Address(str(warranty.creator))).emit_transfer(value=amount)
+            gl.get_contract_at(Address(str(warranty.creator))).emit_transfer(value=u256(amount))
         elif verdict_str == "PARTIAL":
             half = amount // bigint(2)
             rem = amount - half
-            gl.get_contract_at(Address(str(claim.claimer))).emit_transfer(value=half)
-            gl.get_contract_at(Address(str(warranty.creator))).emit_transfer(value=rem)
+            gl.get_contract_at(Address(str(claim.claimer))).emit_transfer(value=u256(half))
+            gl.get_contract_at(Address(str(warranty.creator))).emit_transfer(value=u256(rem))
         # ESCALATE: funds remain locked in contract
 
         return verdict_str
@@ -340,8 +340,8 @@ You MUST reply with ONLY a valid JSON object, no markdown, no extra text:
         half = amount // bigint(2)
         rem = amount - half
 
-        gl.get_contract_at(Address(str(claim.claimer))).emit_transfer(value=half)
-        gl.get_contract_at(Address(str(warranty.creator))).emit_transfer(value=rem)
+        gl.get_contract_at(Address(str(claim.claimer))).emit_transfer(value=u256(half))
+        gl.get_contract_at(Address(str(warranty.creator))).emit_transfer(value=u256(rem))
 
         claim.status = "RELEASED"
         self.claims[claim_id] = claim
