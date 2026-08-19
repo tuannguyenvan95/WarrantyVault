@@ -4,6 +4,26 @@ from genlayer import *
 import json
 from dataclasses import dataclass
 
+# Dispute window timeout: 7 days in seconds
+DISPUTE_WINDOW_SECONDS = 604800
+
+def parse_json_from_llm(text) -> dict:
+    """Module-level pure helper function for parsing LLM JSON output."""
+    if isinstance(text, dict):
+        return text
+    if hasattr(text, "__dict__"):
+        return text.__dict__
+    if not isinstance(text, str):
+        text = str(text)
+    text = text.strip()
+    if text.startswith("```json"):
+        text = text[7:]
+    elif text.startswith("```"):
+        text = text[3:]
+    if text.endswith("```"):
+        text = text[:-3]
+    return json.loads(text.strip())
+
 @allow_storage
 @dataclass
 class Warranty:
@@ -41,21 +61,7 @@ class Contract(gl.Contract):
         self.next_claim_id = bigint(1)
 
     def _parse_llm_json(self, text) -> dict:
-        """Parse JSON response from LLM, handling optional markdown formatting."""
-        if isinstance(text, dict):
-            return text
-        if hasattr(text, "__dict__"):
-            return text.__dict__
-        if not isinstance(text, str):
-            text = str(text)
-        text = text.strip()
-        if text.startswith("```json"):
-            text = text[7:]
-        elif text.startswith("```"):
-            text = text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
-        return json.loads(text.strip())
+        return parse_json_from_llm(text)
 
     @gl.public.write.payable
     def create_warranty(
@@ -105,7 +111,7 @@ class Contract(gl.Contract):
         warranty_id: str,
         description: str,
         evidence_urls: str,
-        current_time_str: str = "0"
+        current_time_str: str
     ) -> str:
         if warranty_id not in self.warranties:
             raise UserError("Warranty not found")
@@ -115,15 +121,17 @@ class Contract(gl.Contract):
         if warranty.status != "ACTIVE":
             raise UserError("Warranty is not active")
 
-        # Expiry verification
+        # Strict timestamp validation
         try:
             curr_time = int(current_time_str)
-            if curr_time > 0 and curr_time > int(str(warranty.expiry)):
-                raise UserError("Warranty has expired")
-        except UserError:
-            raise
         except Exception:
-            pass
+            raise UserError("Invalid current timestamp format")
+
+        if curr_time <= 0:
+            raise UserError("Current timestamp must be positive")
+
+        if curr_time > int(str(warranty.expiry)):
+            raise UserError("Warranty has expired")
 
         if str(gl.message.sender_address).lower() != str(warranty.customer_address).lower():
             raise UserError("Unauthorized: Only the registered customer can file a claim")
@@ -152,7 +160,7 @@ class Contract(gl.Contract):
         return claim_id
 
     @gl.public.write
-    def adjudicate_claim(self, claim_id: str, current_time_str: str = "0") -> str:
+    def adjudicate_claim(self, claim_id: str, current_time_str: str) -> str:
         if claim_id not in self.claims:
             raise UserError("Claim not found")
 
@@ -164,6 +172,16 @@ class Contract(gl.Contract):
             raise UserError("Related warranty not found")
 
         warranty = self.warranties[claim.warranty_id]
+
+        try:
+            ts_val = int(current_time_str)
+            if ts_val <= 0:
+                raise UserError("Invalid adjudication timestamp")
+            adjudicated_ts = bigint(ts_val)
+        except UserError:
+            raise
+        except Exception:
+            raise UserError("Invalid adjudication timestamp format")
 
         policy_url_str = str(warranty.policy_url)
         product_info_str = str(warranty.product_info)
@@ -254,7 +272,7 @@ You MUST reply with ONLY a JSON object:
                 return res.calldata
             try:
                 text = res.content if hasattr(res, "content") else str(res)
-                return self._parse_llm_json(text)
+                return parse_json_from_llm(text)
             except Exception:
                 return {
                     "verdict": "ESCALATE",
@@ -269,7 +287,7 @@ You MUST reply with ONLY a JSON object:
             leader_data = leader_res.calldata if hasattr(leader_res, "calldata") else leader_res
             if not isinstance(leader_data, dict):
                 try:
-                    leader_data = self._parse_llm_json(str(leader_data))
+                    leader_data = parse_json_from_llm(str(leader_data))
                 except Exception:
                     leader_data = {"verdict": "ESCALATE"}
 
@@ -282,7 +300,7 @@ You MUST reply with ONLY a JSON object:
 
         if not isinstance(result, dict):
             try:
-                result = self._parse_llm_json(str(result))
+                result = parse_json_from_llm(str(result))
             except Exception:
                 result = {
                     "verdict": "ESCALATE",
@@ -304,13 +322,6 @@ You MUST reply with ONLY a JSON object:
         if verdict_str not in ["COVERED", "PARTIAL", "REJECTED", "ESCALATE"]:
             verdict_str = "ESCALATE"
             reason_str = f"Invalid verdict normalized to ESCALATE. Original: {reason_str}"
-
-        # Timestamp tracking
-        try:
-            ts_val = int(current_time_str)
-            adjudicated_ts = bigint(ts_val) if ts_val > 0 else bigint(0)
-        except Exception:
-            adjudicated_ts = bigint(0)
 
         claim.status = "ADJUDICATED"
         claim.verdict = verdict_str
@@ -345,7 +356,7 @@ You MUST reply with ONLY a JSON object:
         return verdict_str
 
     @gl.public.write
-    def release_escalated_funds(self, claim_id: str, current_time_str: str = "0") -> str:
+    def release_escalated_funds(self, claim_id: str, current_time_str: str) -> str:
         if claim_id not in self.claims:
             raise UserError("Claim not found")
 
@@ -369,6 +380,24 @@ You MUST reply with ONLY a JSON object:
 
         if sender != creator and sender != claimer:
             raise UserError("Only the warranty creator or claimer can release escalated funds")
+
+        # Dispute timing validation
+        try:
+            curr_time = int(current_time_str)
+        except Exception:
+            raise UserError("Invalid current timestamp format")
+
+        if curr_time <= 0:
+            raise UserError("Current timestamp must be positive")
+
+        adjudicated_ts = int(str(claim.adjudicated_at))
+        
+        # If both parties settle or dispute grace period has elapsed
+        # Only claimer requires cooldown period; retailer can release early anytime to favor customer
+        if sender == claimer and adjudicated_ts > 0:
+            if curr_time < adjudicated_ts + DISPUTE_WINDOW_SECONDS:
+                remaining = (adjudicated_ts + DISPUTE_WINDOW_SECONDS) - curr_time
+                raise UserError(f"Dispute window active. Please wait {remaining} seconds before unilateral release.")
 
         half = amount // bigint(2)
         rem = amount - half

@@ -8,7 +8,7 @@ on:
 
 jobs:
   contract-verify:
-    name: GenLayer Contract Runtime Check
+    name: GenLayer Contract Verification & Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -21,6 +21,9 @@ jobs:
 
       - name: Run Reproducible Contract Verification
         run: python scripts/verify_contract.py
+
+      - name: Run Contract Test Suite
+        run: python -m unittest discover tests
 
   lint:
     name: Frontend Lint
