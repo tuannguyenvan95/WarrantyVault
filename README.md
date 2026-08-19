@@ -4,7 +4,7 @@ A decentralized protocol for managing hardware warranties and adjudicating claim
 
 ## Deployed Contract (Studionet)
 Address: `0xF02754cfD826Bbd5Cbac264338C86Ae72f0e4227`
-Explorer: https://genlayer-explorer.vercel.app/address/0xF02754cfD826Bbd5Cbac264338C86Ae72f0e4227
+Explorer: https://explorer-studio.genlayer.com/address/0xF02754cfD826Bbd5Cbac264338C86Ae72f0e4227
 
 ## Live App
 https://warranty-vault-genlayer.vercel.app
