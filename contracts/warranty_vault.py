@@ -40,8 +40,8 @@ class Contract(gl.Contract):
         self.next_warranty_id = bigint(1)
         self.next_claim_id = bigint(1)
 
-    @staticmethod
-    def _parse_llm_json(text) -> dict:
+    def _parse_llm_json(self, text) -> dict:
+        """Parse JSON response from LLM, handling optional markdown formatting."""
         if isinstance(text, dict):
             return text
         if hasattr(text, "__dict__"):
@@ -100,7 +100,13 @@ class Contract(gl.Contract):
         return warranty_id
 
     @gl.public.write
-    def file_claim(self, warranty_id: str, description: str, evidence_urls: str) -> str:
+    def file_claim(
+        self,
+        warranty_id: str,
+        description: str,
+        evidence_urls: str,
+        current_time_str: str = "0"
+    ) -> str:
         if warranty_id not in self.warranties:
             raise UserError("Warranty not found")
 
@@ -108,6 +114,16 @@ class Contract(gl.Contract):
 
         if warranty.status != "ACTIVE":
             raise UserError("Warranty is not active")
+
+        # Expiry verification
+        try:
+            curr_time = int(current_time_str)
+            if curr_time > 0 and curr_time > int(str(warranty.expiry)):
+                raise UserError("Warranty has expired")
+        except UserError:
+            raise
+        except Exception:
+            pass
 
         if str(gl.message.sender_address).lower() != str(warranty.customer_address).lower():
             raise UserError("Unauthorized: Only the registered customer can file a claim")
@@ -136,7 +152,7 @@ class Contract(gl.Contract):
         return claim_id
 
     @gl.public.write
-    def adjudicate_claim(self, claim_id: str) -> str:
+    def adjudicate_claim(self, claim_id: str, current_time_str: str = "0") -> str:
         if claim_id not in self.claims:
             raise UserError("Claim not found")
 
@@ -238,7 +254,7 @@ You MUST reply with ONLY a JSON object:
                 return res.calldata
             try:
                 text = res.content if hasattr(res, "content") else str(res)
-                return Contract._parse_llm_json(text)
+                return self._parse_llm_json(text)
             except Exception:
                 return {
                     "verdict": "ESCALATE",
@@ -253,7 +269,7 @@ You MUST reply with ONLY a JSON object:
             leader_data = leader_res.calldata if hasattr(leader_res, "calldata") else leader_res
             if not isinstance(leader_data, dict):
                 try:
-                    leader_data = Contract._parse_llm_json(str(leader_data))
+                    leader_data = self._parse_llm_json(str(leader_data))
                 except Exception:
                     leader_data = {"verdict": "ESCALATE"}
 
@@ -266,7 +282,7 @@ You MUST reply with ONLY a JSON object:
 
         if not isinstance(result, dict):
             try:
-                result = Contract._parse_llm_json(str(result))
+                result = self._parse_llm_json(str(result))
             except Exception:
                 result = {
                     "verdict": "ESCALATE",
@@ -289,35 +305,47 @@ You MUST reply with ONLY a JSON object:
             verdict_str = "ESCALATE"
             reason_str = f"Invalid verdict normalized to ESCALATE. Original: {reason_str}"
 
+        # Timestamp tracking
+        try:
+            ts_val = int(current_time_str)
+            adjudicated_ts = bigint(ts_val) if ts_val > 0 else bigint(0)
+        except Exception:
+            adjudicated_ts = bigint(0)
+
         claim.status = "ADJUDICATED"
         claim.verdict = verdict_str
         claim.reason = reason_str
         claim.confidence = bigint(confidence_val)
-        claim.adjudicated_at = bigint(0)
+        claim.adjudicated_at = adjudicated_ts
         self.claims[claim_id] = claim
 
         amount = warranty.locked_amount
 
+        # Payout accounting alignment: zero out locked_amount when funds are disbursed
         if verdict_str == "COVERED":
             warranty.status = "CLOSED"
+            warranty.locked_amount = bigint(0)
             gl.get_contract_at(Address(str(claim.claimer))).emit_transfer(value=u256(amount))
         elif verdict_str == "REJECTED":
             warranty.status = "CLOSED"
+            warranty.locked_amount = bigint(0)
             gl.get_contract_at(Address(str(warranty.creator))).emit_transfer(value=u256(amount))
         elif verdict_str == "PARTIAL":
             warranty.status = "CLOSED"
+            warranty.locked_amount = bigint(0)
             half = amount // bigint(2)
             rem = amount - half
             gl.get_contract_at(Address(str(claim.claimer))).emit_transfer(value=u256(half))
             gl.get_contract_at(Address(str(warranty.creator))).emit_transfer(value=u256(rem))
         elif verdict_str == "ESCALATE":
             warranty.status = "ESCALATED"
+            # Retain locked_amount in escrow until release_escalated_funds
 
         self.warranties[warranty.id] = warranty
         return verdict_str
 
     @gl.public.write
-    def release_escalated_funds(self, claim_id: str) -> str:
+    def release_escalated_funds(self, claim_id: str, current_time_str: str = "0") -> str:
         if claim_id not in self.claims:
             raise UserError("Claim not found")
 
@@ -351,6 +379,7 @@ You MUST reply with ONLY a JSON object:
         claim.status = "RELEASED"
         self.claims[claim_id] = claim
 
+        # Payout accounting alignment: close warranty and set locked_amount to 0
         warranty.status = "CLOSED"
         warranty.locked_amount = bigint(0)
         self.warranties[warranty.id] = warranty

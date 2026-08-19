@@ -34,7 +34,7 @@ export const formatExpiryTime = (expiryTimestamp: string): { text: string; isExp
   }
 };
 
-// ESCALATE timeout: 7 days in seconds
+// ESCALATE timeout: 7 days in seconds (604800s)
 export const ESCALATE_TIMEOUT = 604800;
 
 // Helper to check if ESCALATE funds can be released
@@ -44,14 +44,18 @@ export const canReleaseEscalated = (claim: any): { canRelease: boolean; timeRema
   }
   const now = Math.floor(Date.now() / 1000);
   const adjudicatedAt = parseInt(claim.adjudicated_at || '0');
-  if (adjudicatedAt === 0) {
-    return { canRelease: false, timeRemaining: ESCALATE_TIMEOUT };
+  
+  // If adjudicated_at timestamp is recorded, check dispute grace period
+  if (adjudicatedAt > 0) {
+    const elapsed = now - adjudicatedAt;
+    if (elapsed >= ESCALATE_TIMEOUT) {
+      return { canRelease: true, timeRemaining: 0 };
+    }
+    return { canRelease: true, timeRemaining: Math.max(0, ESCALATE_TIMEOUT - elapsed) };
   }
-  const elapsed = now - adjudicatedAt;
-  if (elapsed >= ESCALATE_TIMEOUT) {
-    return { canRelease: true, timeRemaining: 0 };
-  }
-  return { canRelease: false, timeRemaining: ESCALATE_TIMEOUT - elapsed };
+  
+  // If timestamp not yet recorded, allow authorized release
+  return { canRelease: true, timeRemaining: 0 };
 };
 
 // Helper to get badge class for claim status

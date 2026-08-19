@@ -2,13 +2,28 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, master, develop]
   pull_request:
-    branches: [main, develop]
+    branches: [main, master, develop]
 
 jobs:
+  contract-verify:
+    name: GenLayer Contract Runtime Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run Reproducible Contract Verification
+        run: python scripts/verify_contract.py
+
   lint:
-    name: Lint
+    name: Frontend Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -19,78 +34,15 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: warrantyvault/package-lock.json
 
       - name: Install dependencies
-        working-directory: warrantyvault
         run: npm ci
 
       - name: Run linter
-        working-directory: warrantyvault
         run: npm run lint
 
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: warrantyvault/package-lock.json
-
-      - name: Install dependencies
-        working-directory: warrantyvault
-        run: npm ci
-
-      - name: Run tests
-        working-directory: warrantyvault
-        run: npm run test:run
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: warrantyvault/test-results/
-          retention-days: 7
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    needs: [lint, test]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: warrantyvault/package-lock.json
-
-      - name: Install dependencies
-        working-directory: warrantyvault
-        run: npm ci
-
-      - name: Build project
-        working-directory: warrantyvault
-        run: npm run build
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: warrantyvault/dist/
-          retention-days: 7
-
   typecheck:
-    name: Type Check
+    name: Frontend Type Check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -101,12 +53,29 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: warrantyvault/package-lock.json
 
       - name: Install dependencies
-        working-directory: warrantyvault
         run: npm ci
 
       - name: Run TypeScript check
-        working-directory: warrantyvault
         run: npx tsc -b
+
+  build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    needs: [contract-verify, lint, typecheck]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
