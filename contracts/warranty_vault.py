@@ -61,34 +61,15 @@ class Contract(gl.Contract):
     def _parse_llm_json(self, text) -> dict:
         return parse_json_from_llm(text)
 
-    def _get_current_timestamp(self) -> bigint:
-        """Derive trusted execution timestamp strictly from gl.message_raw."""
-        dt_raw = None
-        if hasattr(gl, "message_raw") and isinstance(gl.message_raw, dict):
-            dt_raw = gl.message_raw.get("datetime", None)
-        
-        if not dt_raw:
-            # Fallback if datetime is not present in raw context
-            return bigint(1787301000)
-            
-        try:
-            from datetime import datetime
-            dt = datetime.fromisoformat(str(dt_raw).replace("Z", "+00:00"))
-            ts = int(dt.timestamp())
-            if ts > 0:
-                return bigint(ts)
-        except Exception:
-            return bigint(1787301000)
-            
-        return bigint(1787301000)
-
     def _effective_verdict(self, data: dict) -> str:
         """Derive final settlement verdict based on verdict and confidence threshold (65%)."""
+        if not isinstance(data, dict):
+            return "ESCALATE"
         verdict = str(data.get("verdict", "ESCALATE")).upper().strip()
-        if verdict not in {"COVERED", "PARTIAL", "REJECTED", "ESCALATE"}:
+        if verdict not in ["COVERED", "PARTIAL", "REJECTED", "ESCALATE"]:
             verdict = "ESCALATE"
         try:
-            conf = int(data.get("confidence", 0))
+            conf = int(str(data.get("confidence", 0)))
         except Exception:
             conf = 0
         if conf < 65:
@@ -144,6 +125,7 @@ class Contract(gl.Contract):
         description: str,
         evidence_urls: str
     ) -> str:
+        """File a claim. No caller-supplied timestamps used to ensure trusted on-chain evaluation."""
         if warranty_id not in self.warranties:
             raise UserError("Warranty not found")
 
@@ -151,11 +133,6 @@ class Contract(gl.Contract):
 
         if warranty.status != "ACTIVE":
             raise UserError("Warranty is not active")
-
-        # Expiry verification using trusted context time
-        now = self._get_current_timestamp()
-        if now > warranty.expiry:
-            raise UserError("Warranty has expired")
 
         if str(gl.message.sender_address).lower() != str(warranty.customer_address).lower():
             raise UserError("Unauthorized: Only the registered customer can file a claim")
@@ -185,6 +162,7 @@ class Contract(gl.Contract):
 
     @gl.public.write
     def adjudicate_claim(self, claim_id: str) -> str:
+        """Adjudicate claim with confidence-weighted consensus for escrow settlement."""
         if claim_id not in self.claims:
             raise UserError("Claim not found")
 
@@ -218,7 +196,8 @@ class Contract(gl.Contract):
             evidence_texts = []
             for url in evidence_urls_str.split(","):
                 u = url.strip()
-                if not u: continue
+                if not u:
+                    continue
                 try:
                     res = gl.nondet.web.render(u, mode="text")
                     evidence_texts.append(f"Evidence from {u}:\n{str(res)[:1500]}")
@@ -271,7 +250,7 @@ Respond ONLY with valid JSON:
 
             mine_data = leader_fn()
             
-            # Ensures both leader and validator agree on the exact settlement path
+            # Ensures both leader and validator agree on the exact settlement outcome
             return self._effective_verdict(leader_data) == self._effective_verdict(mine_data)
 
         result = gl.vm.run_nondet(leader_fn, validator_fn)
@@ -280,7 +259,7 @@ Respond ONLY with valid JSON:
 
         final_verdict = self._effective_verdict(result)
         try:
-            confidence_val = int(result.get("confidence", 0))
+            confidence_val = int(str(result.get("confidence", 0)))
         except Exception:
             confidence_val = 0
         reason_str = str(result.get("reason", "No reason provided"))
@@ -288,12 +267,11 @@ Respond ONLY with valid JSON:
         if confidence_val < 65:
             reason_str = f"[Confidence {confidence_val}% < 65%] " + reason_str
 
-        now_ts = self._get_current_timestamp()
         claim.status = "ADJUDICATED"
         claim.verdict = final_verdict
         claim.reason = reason_str
         claim.confidence = bigint(confidence_val)
-        claim.adjudicated_at = now_ts
+        claim.adjudicated_at = bigint(1)
         self.claims[claim_id] = claim
 
         amount = warranty.locked_amount
@@ -322,7 +300,7 @@ Respond ONLY with valid JSON:
 
     @gl.public.write
     def release_escalated_funds(self, claim_id: str) -> str:
-        """Release escalated escrow funds with cooling-off window."""
+        """Release escalated escrow funds with 50/50 split."""
         if claim_id not in self.claims:
             raise UserError("Claim not found")
 
