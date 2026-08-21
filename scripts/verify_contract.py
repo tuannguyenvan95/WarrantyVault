@@ -43,6 +43,8 @@ def check_contract(file_path: str) -> bool:
         "release_escalated_funds",
         "get_warranty",
         "get_claim",
+        "_get_current_timestamp",
+        "_effective_verdict",
         "_parse_llm_json"
     ]
     for m in required_methods:
