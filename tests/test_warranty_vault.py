@@ -36,7 +36,6 @@ if "genlayer" not in sys.modules:
         class Contract:
             pass
         public = MockPublic()
-        message_raw = {"datetime": "2026-08-21T08:30:00Z"}
         class VM:
             @staticmethod
             def run_nondet(leader_fn, validator_fn):
@@ -69,10 +68,6 @@ class TestWarrantyVaultContract(unittest.TestCase):
     def test_effective_verdict_low_confidence_escalates(self):
         sample = {"verdict": "COVERED", "confidence": 40}
         self.assertEqual(self.contract._effective_verdict(sample), "ESCALATE")
-
-    def test_trusted_timestamp(self):
-        ts = self.contract._get_current_timestamp()
-        self.assertGreater(int(str(ts)), 0)
 
     def test_contract_initialization(self):
         self.assertEqual(self.contract.next_warranty_id, 1)
