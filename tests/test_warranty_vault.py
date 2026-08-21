@@ -36,6 +36,7 @@ if "genlayer" not in sys.modules:
         class Contract:
             pass
         public = MockPublic()
+        message_raw = {"datetime": "2026-08-21T08:30:00Z"}
         class VM:
             @staticmethod
             def run_nondet(leader_fn, validator_fn):
@@ -48,7 +49,7 @@ if "genlayer" not in sys.modules:
 # Add contracts directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "contracts")))
 
-from warranty_vault import parse_json_from_llm, DISPUTE_WINDOW_SECONDS, Warranty, Claim, Contract
+from warranty_vault import parse_json_from_llm, Warranty, Claim, Contract
 
 class TestWarrantyVaultContract(unittest.TestCase):
 
@@ -67,13 +68,13 @@ class TestWarrantyVaultContract(unittest.TestCase):
         self.assertEqual(parsed["verdict"], "REJECTED")
         self.assertEqual(parsed["confidence"], 90)
 
-    def test_parse_json_from_llm_dict(self):
-        sample = {"verdict": "ESCALATE", "confidence": 50, "reason": "Ambiguous evidence"}
-        parsed = parse_json_from_llm(sample)
-        self.assertEqual(parsed["verdict"], "ESCALATE")
+    def test_effective_verdict_high_confidence(self):
+        sample = {"verdict": "COVERED", "confidence": 80}
+        self.assertEqual(self.contract._effective_verdict(sample), "COVERED")
 
-    def test_dispute_window_constant(self):
-        self.assertEqual(DISPUTE_WINDOW_SECONDS, 604800)  # 7 days
+    def test_effective_verdict_low_confidence_escalates(self):
+        sample = {"verdict": "COVERED", "confidence": 40}
+        self.assertEqual(self.contract._effective_verdict(sample), "ESCALATE")
 
     def test_contract_initialization(self):
         self.assertEqual(self.contract.next_warranty_id, 1)
