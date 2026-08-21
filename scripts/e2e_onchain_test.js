@@ -51,11 +51,10 @@ async function runTest() {
 
     // 2. File Claim
     console.log(`\n[2] TEST FILING WARRANTY CLAIM...`);
-    const currentTime1 = Math.floor(Date.now() / 1000).toString();
     const hash2 = await client.writeContract({
       address: CONTRACT_ADDRESS,
       functionName: 'file_claim',
-      args: [warrantyId, "The screen randomly cracked while opening the lid gently without dropping.", "https://raw.githubusercontent.com/tuannguyenvan95/WarrantyVault/master/src/assets/broken.jpg", currentTime1]
+      args: [warrantyId, "The screen randomly cracked while opening the lid gently without dropping.", "https://raw.githubusercontent.com/tuannguyenvan95/WarrantyVault/master/src/assets/broken.jpg"]
     });
     
     console.log("-> File Claim Tx Hash:", hash2);
@@ -75,11 +74,10 @@ async function runTest() {
     // 3. Adjudicate Claim
     console.log(`\n[3] TEST AI ADJUDICATION & AUTOMATED PAYOUT...`);
     console.log("-> Triggering GenLayer AI Validators (processing ~30-60s)...");
-    const currentTime2 = Math.floor(Date.now() / 1000).toString();
     const hash3 = await client.writeContract({
       address: CONTRACT_ADDRESS,
       functionName: 'adjudicate_claim',
-      args: [claimId, currentTime2]
+      args: [claimId]
     });
     
     console.log("-> Adjudicate Tx Hash:", hash3);
@@ -115,11 +113,10 @@ async function runTest() {
     // 5. Release Escalated Funds if needed
     if (claimResult.verdict === 'ESCALATE') {
       console.log(`\n[5] TEST RELEASING ESCALATED ESCROW FUNDS...`);
-      const currentTime3 = Math.floor(Date.now() / 1000).toString();
       const hash4 = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'release_escalated_funds',
-        args: [claimId, currentTime3]
+        args: [claimId]
       });
       console.log("-> Release Funds Tx Hash:", hash4);
       const receipt4 = await client.waitForTransactionReceipt({ hash: hash4, timeout: 120000 });

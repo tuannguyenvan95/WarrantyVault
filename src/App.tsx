@@ -263,11 +263,10 @@ Customer: ${customerAddress}`;
     if (!client || !account || !activeWarrantyId) return;
     try {
       setLoading(true);
-      const currentTime = Math.floor(Date.now() / 1000).toString();
       const hash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'file_claim',
-        args: [activeWarrantyId, claimDesc, evidenceUrl, currentTime]
+        args: [activeWarrantyId, claimDesc, evidenceUrl]
       } as any);
       const receipt = await client.waitForTransactionReceipt({ 
         hash,
@@ -292,11 +291,10 @@ Customer: ${customerAddress}`;
     if (!client || !account) return;
     try {
       setLoading(true);
-      const currentTime = Math.floor(Date.now() / 1000).toString();
       const hash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'adjudicate_claim',
-        args: [claimId, currentTime]
+        args: [claimId]
       } as any);
       const receipt = await client.waitForTransactionReceipt({ 
         hash,
@@ -318,11 +316,10 @@ Customer: ${customerAddress}`;
     if (!client || !account) return;
     try {
       setLoading(true);
-      const currentTime = Math.floor(Date.now() / 1000).toString();
       const hash = await client.writeContract({
         address: CONTRACT_ADDRESS,
         functionName: 'release_escalated_funds',
-        args: [claimId, currentTime]
+        args: [claimId]
       } as any);
       await client.waitForTransactionReceipt({ 
         hash,
