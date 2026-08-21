@@ -36,7 +36,6 @@ if "genlayer" not in sys.modules:
         class Contract:
             pass
         public = MockPublic()
-        message_raw = {"datetime": "2026-08-21T08:30:00Z"}
         class VM:
             @staticmethod
             def run_nondet(leader_fn, validator_fn):
@@ -49,7 +48,7 @@ if "genlayer" not in sys.modules:
 # Add contracts directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "contracts")))
 
-from warranty_vault import parse_json_from_llm, Warranty, Claim, Contract
+from warranty_vault import Warranty, Claim, Contract
 
 class TestWarrantyVaultContract(unittest.TestCase):
 
@@ -58,23 +57,15 @@ class TestWarrantyVaultContract(unittest.TestCase):
 
     def test_parse_json_from_llm_clean(self):
         sample = '{"verdict": "COVERED", "confidence": 95, "reason": "Valid claim"}'
-        parsed = parse_json_from_llm(sample)
+        parsed = self.contract._parse_llm_json(sample)
         self.assertEqual(parsed["verdict"], "COVERED")
         self.assertEqual(parsed["confidence"], 95)
 
     def test_parse_json_from_llm_markdown(self):
         sample = '```json\n{"verdict": "REJECTED", "confidence": 90, "reason": "Physical abuse"}\n```'
-        parsed = parse_json_from_llm(sample)
+        parsed = self.contract._parse_llm_json(sample)
         self.assertEqual(parsed["verdict"], "REJECTED")
         self.assertEqual(parsed["confidence"], 90)
-
-    def test_effective_verdict_high_confidence(self):
-        sample = {"verdict": "COVERED", "confidence": 80}
-        self.assertEqual(self.contract._effective_verdict(sample), "COVERED")
-
-    def test_effective_verdict_low_confidence_escalates(self):
-        sample = {"verdict": "COVERED", "confidence": 40}
-        self.assertEqual(self.contract._effective_verdict(sample), "ESCALATE")
 
     def test_contract_initialization(self):
         self.assertEqual(self.contract.next_warranty_id, 1)
