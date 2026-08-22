@@ -54,7 +54,7 @@ class Contract(gl.Contract):
     def get_warranty(self, warranty_id: str) -> str:
         import json
         if warranty_id not in self.warranties:
-            raise UserError("Warranty not found")
+            raise Exception("Warranty not found")
         w = self.warranties[warranty_id]
         return json.dumps({
             "id": str(warranty_id),
@@ -97,7 +97,7 @@ class Contract(gl.Contract):
     def get_claim(self, claim_id: str) -> str:
         import json
         if claim_id not in self.warranties:
-            raise UserError("Claim not found")
+            raise Exception("Claim not found")
         w = self.warranties[claim_id]
         return json.dumps({
             "id": str(claim_id),
@@ -116,19 +116,19 @@ class Contract(gl.Contract):
     def create_warranty(self, customer_address_str: str, policy_url: str, product_info: str, expiry_timestamp: str) -> str:
         amount = gl.message.value
         if amount <= bigint(0):
-            raise UserError("Deposit amount must be greater than 0")
+            raise Exception("Deposit amount must be greater than 0")
         if not customer_address_str or not str(customer_address_str).strip():
-            raise UserError("customer_address is required")
+            raise Exception("customer_address is required")
         if not policy_url or not str(policy_url).strip():
-            raise UserError("policy_url is required")
+            raise Exception("policy_url is required")
         if not product_info or not str(product_info).strip():
-            raise UserError("product_info is required")
+            raise Exception("product_info is required")
         try:
             expiry = bigint(int(expiry_timestamp))
         except Exception:
-            raise UserError("Invalid expiry timestamp")
+            raise Exception("Invalid expiry timestamp")
         if expiry <= bigint(0):
-            raise UserError("Expiry timestamp must be greater than 0")
+            raise Exception("Expiry timestamp must be greater than 0")
 
         warranty_id = str(self.next_warranty_id)
         self.next_warranty_id += bigint(1)
@@ -153,14 +153,14 @@ class Contract(gl.Contract):
     @gl.public.write
     def file_claim(self, warranty_id: str, description: str, evidence_urls: str) -> str:
         if warranty_id not in self.warranties:
-            raise UserError("Warranty not found")
+            raise Exception("Warranty not found")
         w = self.warranties[warranty_id]
         if w.status != "ACTIVE":
-            raise UserError("Warranty is not active")
+            raise Exception("Warranty is not active")
         if str(gl.message.sender_address).lower() != str(w.customer_address).lower():
-            raise UserError("Unauthorized: Only the registered customer can file a claim")
+            raise Exception("Unauthorized: Only the registered customer can file a claim")
         if not description or not str(description).strip():
-            raise UserError("Claim description is required")
+            raise Exception("Claim description is required")
 
         w.claim_description = str(description).strip()
         w.evidence_urls = str(evidence_urls).strip() if evidence_urls else ""
@@ -171,10 +171,10 @@ class Contract(gl.Contract):
     @gl.public.write
     def adjudicate_claim(self, warranty_id: str) -> None:
         if warranty_id not in self.warranties:
-            raise UserError("Warranty not found")
+            raise Exception("Warranty not found")
         w = self.warranties[warranty_id]
         if w.status != "CLAIMED":
-            raise UserError("Warranty does not have a pending claim")
+            raise Exception("Warranty does not have a pending claim")
 
         policy_url_str = str(w.policy_url)
         product_info_str = str(w.product_info)
@@ -290,18 +290,18 @@ class Contract(gl.Contract):
     @gl.public.write
     def release_escalated_funds(self, warranty_id: str) -> None:
         if warranty_id not in self.warranties:
-            raise UserError("Warranty not found")
+            raise Exception("Warranty not found")
         w = self.warranties[warranty_id]
         if w.status != "ESCALATED":
-            raise UserError("Warranty is not in ESCALATED state")
+            raise Exception("Warranty is not in ESCALATED state")
         amount = w.locked_amount
         if amount <= bigint(0):
-            raise UserError("No funds to release")
+            raise Exception("No funds to release")
         sender = str(gl.message.sender_address).lower()
         creator = str(w.creator).lower()
         claimer = str(w.customer_address).lower()
         if sender != creator and sender != claimer:
-            raise UserError("Only the warranty creator or claimer can release escalated funds")
+            raise Exception("Only the warranty creator or claimer can release escalated funds")
 
         half = amount // bigint(2)
         rem = amount - half
