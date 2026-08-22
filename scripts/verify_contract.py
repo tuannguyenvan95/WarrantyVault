@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Reproducible check script for WarrantyVault Contract (v0.2.18).
+Reproducible check script for WarrantyVault Contract (v0.2.16 / v0.2.18).
 Validates contract syntax, dataclass annotations, and storage rules for GenVM.
 """
 import os
@@ -19,7 +19,7 @@ def check_contract(file_path: str) -> bool:
     lines = [line.strip() for line in content.split("\n") if line.strip()]
 
     # 1. Header & Runtime Dependency Check
-    assert any("# v0.2.18" in line for line in lines[:5]), "Missing '# v0.2.18' version header"
+    assert any("# v0.2.16" in line or "# v0.2.18" in line for line in lines[:5]), "Missing '# v0.2.16' or '# v0.2.18' version header"
     assert any("py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" in line for line in lines[:5]), "Missing pinned py-genlayer runtime"
 
     # 2. AST Parsing
@@ -49,7 +49,7 @@ def check_contract(file_path: str) -> bool:
     for m in required_methods:
         assert m in method_names, f"Missing method: {m}"
 
-    print("[PASS] AST Parsing & GenVM Structure Validation Passed (v0.2.18)!")
+    print("[PASS] AST Parsing & GenVM Structure Validation Passed!")
     return True
 
 if __name__ == "__main__":

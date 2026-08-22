@@ -1,7 +1,6 @@
-# v0.2.18
+# v0.2.16
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 from genlayer import *
-import json
 from dataclasses import dataclass
 
 @allow_storage
@@ -41,6 +40,7 @@ class Contract(gl.Contract):
         self.next_claim_id = bigint(1)
 
     def _parse_llm_json(self, text) -> dict:
+        import json
         if isinstance(text, dict):
             return text
         if hasattr(text, "__dict__"):
@@ -134,7 +134,7 @@ class Contract(gl.Contract):
         return claim_id
 
     @gl.public.write
-    def adjudicate_claim(self, claim_id: str) -> str:
+    def adjudicate_claim(self, claim_id: str) -> None:
         if claim_id not in self.claims:
             raise UserError("Claim not found")
         claim = self.claims[claim_id]
@@ -152,7 +152,7 @@ class Contract(gl.Contract):
             try:
                 if policy_url_str:
                     policy_res = gl.nondet.web.render(policy_url_str, mode="text")
-                    policy_text = str(policy_res)
+                    policy_text = policy_res.content if hasattr(policy_res, "content") else str(policy_res)
                     lower_text = policy_text[:400].lower()
                     if "404" in lower_text or "not found" in lower_text:
                         return {"verdict": "ESCALATE", "confidence": 100, "reason": "Policy URL 404"}
@@ -168,7 +168,8 @@ class Contract(gl.Contract):
                     continue
                 try:
                     res = gl.nondet.web.render(u, mode="text")
-                    evidence_texts.append("Evidence from " + u + ":\n" + str(res)[:1500])
+                    txt = res.content if hasattr(res, "content") else str(res)
+                    evidence_texts.append("Evidence from " + u + ":\n" + txt[:1500])
                 except Exception as e:
                     evidence_texts.append("Evidence from " + u + ": error - " + str(e))
 
@@ -192,20 +193,32 @@ class Contract(gl.Contract):
             res = gl.nondet.exec_prompt(prompt, response_format="json")
             if isinstance(res, dict):
                 return res
-            return self._parse_llm_json(str(res))
+            if hasattr(res, 'calldata') and isinstance(res.calldata, dict):
+                return res.calldata
+            try:
+                text = res.content if hasattr(res, "content") else str(res)
+                return self._parse_llm_json(text)
+            except Exception:
+                return {"verdict": "ESCALATE", "confidence": 100, "reason": "JSON parse error"}
 
         def validator_fn(leader_res) -> bool:
             if not isinstance(leader_res, gl.vm.Return):
                 return False
             leader_data = leader_res.calldata if hasattr(leader_res, "calldata") else leader_res
             if not isinstance(leader_data, dict):
-                leader_data = self._parse_llm_json(str(leader_data))
+                try:
+                    leader_data = self._parse_llm_json(str(leader_data))
+                except Exception:
+                    leader_data = {"verdict": "ESCALATE"}
             mine_data = leader_fn()
             return self._effective_verdict(leader_data) == self._effective_verdict(mine_data)
 
         result = gl.vm.run_nondet(leader_fn, validator_fn)
         if not isinstance(result, dict):
-            result = self._parse_llm_json(str(result))
+            try:
+                result = self._parse_llm_json(str(result))
+            except Exception:
+                result = {"verdict": "ESCALATE", "confidence": 0, "reason": "Failed to parse response"}
 
         final_verdict = self._effective_verdict(result)
         try:
@@ -242,10 +255,9 @@ class Contract(gl.Contract):
         elif final_verdict == "ESCALATE":
             warranty.status = "ESCALATED"
         self.warranties[warranty.id] = warranty
-        return final_verdict
 
     @gl.public.write
-    def release_escalated_funds(self, claim_id: str) -> str:
+    def release_escalated_funds(self, claim_id: str) -> None:
         if claim_id not in self.claims:
             raise UserError("Claim not found")
         claim = self.claims[claim_id]
@@ -273,10 +285,10 @@ class Contract(gl.Contract):
         warranty.status = "CLOSED"
         warranty.locked_amount = bigint(0)
         self.warranties[warranty.id] = warranty
-        return "RELEASED"
 
     @gl.public.view
     def get_warranty(self, warranty_id: str) -> str:
+        import json
         if warranty_id not in self.warranties:
             raise UserError("Warranty not found")
         w = self.warranties[warranty_id]
@@ -284,6 +296,7 @@ class Contract(gl.Contract):
 
     @gl.public.view
     def get_claim(self, claim_id: str) -> str:
+        import json
         if claim_id not in self.claims:
             raise UserError("Claim not found")
         c = self.claims[claim_id]
@@ -291,6 +304,7 @@ class Contract(gl.Contract):
 
     @gl.public.view
     def get_all_warranties(self) -> str:
+        import json
         result = {}
         for wid, w in self.warranties.items():
             result[wid] = {"id": w.id, "creator": str(w.creator), "customer_address": str(w.customer_address), "product_info": w.product_info, "policy_url": w.policy_url, "locked_amount": str(w.locked_amount), "expiry": str(w.expiry), "status": w.status}
@@ -298,6 +312,7 @@ class Contract(gl.Contract):
 
     @gl.public.view
     def get_all_claims(self) -> str:
+        import json
         result = {}
         for cid, c in self.claims.items():
             result[cid] = {"id": c.id, "warranty_id": c.warranty_id, "claimer": str(c.claimer), "evidence_urls": c.evidence_urls, "description": c.description, "status": c.status, "verdict": c.verdict, "reason": c.reason, "confidence": int(str(c.confidence)), "adjudicated_at": str(c.adjudicated_at)}
