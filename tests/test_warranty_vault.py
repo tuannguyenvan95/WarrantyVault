@@ -1,5 +1,5 @@
 """
-Unit and Integration Test Suite for WarrantyVault GenLayer Contract (v0.2.18)
+Unit and Integration Test Suite for WarrantyVault GenLayer Contract (v0.2.16 / v0.2.18)
 Includes mock environment for local Python verification outside GenVM.
 """
 
@@ -48,7 +48,7 @@ if "genlayer" not in sys.modules:
 # Add contracts directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "contracts")))
 
-from warranty_vault import Warranty, Claim, Contract
+from warranty_vault import Warranty, Contract
 
 class TestWarrantyVaultContract(unittest.TestCase):
 
@@ -70,8 +70,7 @@ class TestWarrantyVaultContract(unittest.TestCase):
         self.assertEqual(self.contract._effective_verdict(sample), "ESCALATE")
 
     def test_contract_initialization(self):
-        self.assertEqual(self.contract.next_warranty_id, 1)
-        self.assertEqual(self.contract.next_claim_id, 1)
+        self.assertEqual(self.contract.next_warranty_id, 0)
 
 if __name__ == "__main__":
     unittest.main()

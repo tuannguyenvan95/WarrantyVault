@@ -29,7 +29,6 @@ def check_contract(file_path: str) -> bool:
 
     assert "Contract" in class_names, "Contract class missing"
     assert "Warranty" in class_names, "Warranty dataclass missing"
-    assert "Claim" in class_names, "Claim dataclass missing"
 
     # 3. Method validation
     contract_class = next(c for c in classes if c.name == "Contract")
@@ -42,7 +41,9 @@ def check_contract(file_path: str) -> bool:
         "adjudicate_claim",
         "release_escalated_funds",
         "get_warranty",
+        "get_all_warranties",
         "get_claim",
+        "get_all_claims",
         "_effective_verdict",
         "_parse_llm_json"
     ]

@@ -6,24 +6,15 @@ from dataclasses import dataclass
 @allow_storage
 @dataclass
 class Warranty:
-    id: str
     creator: Address
     customer_address: Address
-    product_info: str
-    policy_url: str
     locked_amount: bigint
+    policy_url: str
+    product_info: str
     expiry: bigint
     status: str
-
-@allow_storage
-@dataclass
-class Claim:
-    id: str
-    warranty_id: str
-    claimer: Address
+    claim_description: str
     evidence_urls: str
-    description: str
-    status: str
     verdict: str
     reason: str
     confidence: bigint
@@ -31,47 +22,95 @@ class Claim:
 
 class Contract(gl.Contract):
     warranties: TreeMap[str, Warranty]
-    claims: TreeMap[str, Claim]
     next_warranty_id: bigint
-    next_claim_id: bigint
 
     def __init__(self):
-        self.next_warranty_id = bigint(1)
-        self.next_claim_id = bigint(1)
+        self.next_warranty_id = bigint(0)
 
-    def _parse_llm_json(self, text) -> dict:
+    @gl.public.view
+    def get_all_warranties(self) -> str:
         import json
-        if isinstance(text, dict):
-            return text
-        if hasattr(text, "__dict__"):
-            return text.__dict__
-        if not isinstance(text, str):
-            text = str(text)
-        t = text.strip()
-        if t.startswith("```json"):
-            t = t[7:]
-        elif t.startswith("```"):
-            t = t[3:]
-        if t.endswith("```"):
-            t = t[:-3]
-        try:
-            return json.loads(t.strip())
-        except Exception:
-            return {"verdict": "ESCALATE", "confidence": 0, "reason": "JSON parse error"}
+        result = {}
+        for wid, w in self.warranties.items():
+            result[wid] = {
+                "id": str(wid),
+                "creator": str(w.creator),
+                "customer_address": str(w.customer_address),
+                "locked_amount": str(w.locked_amount),
+                "policy_url": w.policy_url,
+                "product_info": w.product_info,
+                "expiry": str(w.expiry),
+                "status": w.status,
+                "claim_description": w.claim_description,
+                "evidence_urls": w.evidence_urls,
+                "verdict": w.verdict,
+                "reason": w.reason,
+                "confidence": int(str(w.confidence)),
+                "adjudicated_at": str(w.adjudicated_at)
+            }
+        return json.dumps(result)
 
-    def _effective_verdict(self, data: dict) -> str:
-        if not isinstance(data, dict):
-            return "ESCALATE"
-        verdict = str(data.get("verdict", "ESCALATE")).upper().strip()
-        if verdict not in ["COVERED", "PARTIAL", "REJECTED", "ESCALATE"]:
-            verdict = "ESCALATE"
-        try:
-            conf = int(str(data.get("confidence", 0)))
-        except Exception:
-            conf = 0
-        if conf < 65:
-            verdict = "ESCALATE"
-        return verdict
+    @gl.public.view
+    def get_warranty(self, warranty_id: str) -> str:
+        import json
+        if warranty_id not in self.warranties:
+            raise UserError("Warranty not found")
+        w = self.warranties[warranty_id]
+        return json.dumps({
+            "id": str(warranty_id),
+            "creator": str(w.creator),
+            "customer_address": str(w.customer_address),
+            "locked_amount": str(w.locked_amount),
+            "policy_url": w.policy_url,
+            "product_info": w.product_info,
+            "expiry": str(w.expiry),
+            "status": w.status,
+            "claim_description": w.claim_description,
+            "evidence_urls": w.evidence_urls,
+            "verdict": w.verdict,
+            "reason": w.reason,
+            "confidence": int(str(w.confidence)),
+            "adjudicated_at": str(w.adjudicated_at)
+        })
+
+    @gl.public.view
+    def get_all_claims(self) -> str:
+        import json
+        result = {}
+        for wid, w in self.warranties.items():
+            if w.status in ["CLAIMED", "ADJUDICATED", "CLOSED", "ESCALATED", "RELEASED"] and w.claim_description:
+                result[wid] = {
+                    "id": str(wid),
+                    "warranty_id": str(wid),
+                    "claimer": str(w.customer_address),
+                    "evidence_urls": w.evidence_urls,
+                    "description": w.claim_description,
+                    "status": "PENDING" if w.status == "CLAIMED" else ("ADJUDICATED" if w.status in ["CLOSED", "ADJUDICATED"] else w.status),
+                    "verdict": w.verdict,
+                    "reason": w.reason,
+                    "confidence": int(str(w.confidence)),
+                    "adjudicated_at": str(w.adjudicated_at)
+                }
+        return json.dumps(result)
+
+    @gl.public.view
+    def get_claim(self, claim_id: str) -> str:
+        import json
+        if claim_id not in self.warranties:
+            raise UserError("Claim not found")
+        w = self.warranties[claim_id]
+        return json.dumps({
+            "id": str(claim_id),
+            "warranty_id": str(claim_id),
+            "claimer": str(w.customer_address),
+            "evidence_urls": w.evidence_urls,
+            "description": w.claim_description,
+            "status": "PENDING" if w.status == "CLAIMED" else ("ADJUDICATED" if w.status in ["CLOSED", "ADJUDICATED"] else w.status),
+            "verdict": w.verdict,
+            "reason": w.reason,
+            "confidence": int(str(w.confidence)),
+            "adjudicated_at": str(w.adjudicated_at)
+        })
 
     @gl.public.write.payable
     def create_warranty(self, customer_address_str: str, policy_url: str, product_info: str, expiry_timestamp: str) -> str:
@@ -90,17 +129,24 @@ class Contract(gl.Contract):
             raise UserError("Invalid expiry timestamp")
         if expiry <= bigint(0):
             raise UserError("Expiry timestamp must be greater than 0")
-        warranty_id = str(int(str(self.next_warranty_id)))
+
+        warranty_id = str(self.next_warranty_id)
         self.next_warranty_id += bigint(1)
+
         self.warranties[warranty_id] = Warranty(
-            id=warranty_id,
             creator=gl.message.sender_address,
             customer_address=Address(customer_address_str),
-            product_info=str(product_info).strip(),
-            policy_url=str(policy_url).strip(),
             locked_amount=amount,
+            policy_url=str(policy_url).strip(),
+            product_info=str(product_info).strip(),
             expiry=expiry,
-            status="ACTIVE"
+            status="ACTIVE",
+            claim_description="",
+            evidence_urls="",
+            verdict="",
+            reason="",
+            confidence=bigint(0),
+            adjudicated_at=bigint(0)
         )
         return warranty_id
 
@@ -108,45 +154,32 @@ class Contract(gl.Contract):
     def file_claim(self, warranty_id: str, description: str, evidence_urls: str) -> str:
         if warranty_id not in self.warranties:
             raise UserError("Warranty not found")
-        warranty = self.warranties[warranty_id]
-        if warranty.status != "ACTIVE":
+        w = self.warranties[warranty_id]
+        if w.status != "ACTIVE":
             raise UserError("Warranty is not active")
-        if str(gl.message.sender_address).lower() != str(warranty.customer_address).lower():
+        if str(gl.message.sender_address).lower() != str(w.customer_address).lower():
             raise UserError("Unauthorized: Only the registered customer can file a claim")
         if not description or not str(description).strip():
             raise UserError("Claim description is required")
-        claim_id = str(int(str(self.next_claim_id)))
-        self.next_claim_id += bigint(1)
-        self.claims[claim_id] = Claim(
-            id=claim_id,
-            warranty_id=warranty_id,
-            claimer=gl.message.sender_address,
-            evidence_urls=str(evidence_urls).strip() if evidence_urls else "",
-            description=str(description).strip(),
-            status="PENDING",
-            verdict="",
-            reason="",
-            confidence=bigint(0),
-            adjudicated_at=bigint(0)
-        )
-        warranty.status = "CLAIMED"
-        self.warranties[warranty_id] = warranty
-        return claim_id
+
+        w.claim_description = str(description).strip()
+        w.evidence_urls = str(evidence_urls).strip() if evidence_urls else ""
+        w.status = "CLAIMED"
+        self.warranties[warranty_id] = w
+        return warranty_id
 
     @gl.public.write
-    def adjudicate_claim(self, claim_id: str) -> None:
-        if claim_id not in self.claims:
-            raise UserError("Claim not found")
-        claim = self.claims[claim_id]
-        if claim.status != "PENDING":
-            raise UserError("Claim already adjudicated")
-        if claim.warranty_id not in self.warranties:
-            raise UserError("Related warranty not found")
-        warranty = self.warranties[claim.warranty_id]
-        policy_url_str = str(warranty.policy_url)
-        product_info_str = str(warranty.product_info)
-        claim_desc_str = str(claim.description)
-        evidence_urls_str = str(claim.evidence_urls)
+    def adjudicate_claim(self, warranty_id: str) -> None:
+        if warranty_id not in self.warranties:
+            raise UserError("Warranty not found")
+        w = self.warranties[warranty_id]
+        if w.status != "CLAIMED":
+            raise UserError("Warranty does not have a pending claim")
+
+        policy_url_str = str(w.policy_url)
+        product_info_str = str(w.product_info)
+        claim_desc_str = str(w.claim_description)
+        evidence_urls_str = str(w.evidence_urls)
 
         def leader_fn():
             try:
@@ -229,91 +262,85 @@ class Contract(gl.Contract):
         if confidence_val < 65:
             reason_str = "[Low confidence " + str(confidence_val) + "%] " + reason_str
 
-        claim.status = "ADJUDICATED"
-        claim.verdict = final_verdict
-        claim.reason = reason_str
-        claim.confidence = bigint(confidence_val)
-        claim.adjudicated_at = bigint(0)
-        self.claims[claim_id] = claim
+        w.verdict = final_verdict
+        w.reason = reason_str
+        w.confidence = bigint(confidence_val)
+        w.adjudicated_at = bigint(0)
 
-        amount = warranty.locked_amount
+        amount = w.locked_amount
         if final_verdict == "COVERED":
-            warranty.status = "CLOSED"
-            warranty.locked_amount = bigint(0)
-            gl.get_contract_at(Address(str(claim.claimer))).emit_transfer(value=u256(amount))
+            w.status = "CLOSED"
+            w.locked_amount = bigint(0)
+            gl.get_contract_at(Address(str(w.customer_address))).emit_transfer(value=u256(amount))
         elif final_verdict == "REJECTED":
-            warranty.status = "CLOSED"
-            warranty.locked_amount = bigint(0)
-            gl.get_contract_at(Address(str(warranty.creator))).emit_transfer(value=u256(amount))
+            w.status = "CLOSED"
+            w.locked_amount = bigint(0)
+            gl.get_contract_at(Address(str(w.creator))).emit_transfer(value=u256(amount))
         elif final_verdict == "PARTIAL":
-            warranty.status = "CLOSED"
-            warranty.locked_amount = bigint(0)
+            w.status = "CLOSED"
+            w.locked_amount = bigint(0)
             half = amount // bigint(2)
             rem = amount - half
-            gl.get_contract_at(Address(str(claim.claimer))).emit_transfer(value=u256(half))
-            gl.get_contract_at(Address(str(warranty.creator))).emit_transfer(value=u256(rem))
+            gl.get_contract_at(Address(str(w.customer_address))).emit_transfer(value=u256(half))
+            gl.get_contract_at(Address(str(w.creator))).emit_transfer(value=u256(rem))
         elif final_verdict == "ESCALATE":
-            warranty.status = "ESCALATED"
-        self.warranties[warranty.id] = warranty
+            w.status = "ESCALATED"
+        self.warranties[warranty_id] = w
 
     @gl.public.write
-    def release_escalated_funds(self, claim_id: str) -> None:
-        if claim_id not in self.claims:
-            raise UserError("Claim not found")
-        claim = self.claims[claim_id]
-        if claim.status != "ADJUDICATED":
-            raise UserError("Claim must be adjudicated first")
-        if claim.verdict != "ESCALATE":
-            raise UserError("Only ESCALATE claims can be released")
-        if claim.warranty_id not in self.warranties:
-            raise UserError("Related warranty not found")
-        warranty = self.warranties[claim.warranty_id]
-        amount = warranty.locked_amount
-        if amount <= bigint(0):
-            raise UserError("No funds to release")
-        sender = str(gl.message.sender_address).lower()
-        creator = str(warranty.creator).lower()
-        claimer = str(claim.claimer).lower()
-        if sender != creator and sender != claimer:
-            raise UserError("Only the warranty creator or claimer can release escalated funds")
-        half = amount // bigint(2)
-        rem = amount - half
-        gl.get_contract_at(Address(str(claim.claimer))).emit_transfer(value=u256(half))
-        gl.get_contract_at(Address(str(warranty.creator))).emit_transfer(value=u256(rem))
-        claim.status = "RELEASED"
-        self.claims[claim_id] = claim
-        warranty.status = "CLOSED"
-        warranty.locked_amount = bigint(0)
-        self.warranties[warranty.id] = warranty
-
-    @gl.public.view
-    def get_warranty(self, warranty_id: str) -> str:
-        import json
+    def release_escalated_funds(self, warranty_id: str) -> None:
         if warranty_id not in self.warranties:
             raise UserError("Warranty not found")
         w = self.warranties[warranty_id]
-        return json.dumps({"id": w.id, "creator": str(w.creator), "customer_address": str(w.customer_address), "product_info": w.product_info, "policy_url": w.policy_url, "locked_amount": str(w.locked_amount), "expiry": str(w.expiry), "status": w.status})
+        if w.status != "ESCALATED":
+            raise UserError("Warranty is not in ESCALATED state")
+        amount = w.locked_amount
+        if amount <= bigint(0):
+            raise UserError("No funds to release")
+        sender = str(gl.message.sender_address).lower()
+        creator = str(w.creator).lower()
+        claimer = str(w.customer_address).lower()
+        if sender != creator and sender != claimer:
+            raise UserError("Only the warranty creator or claimer can release escalated funds")
 
-    @gl.public.view
-    def get_claim(self, claim_id: str) -> str:
-        import json
-        if claim_id not in self.claims:
-            raise UserError("Claim not found")
-        c = self.claims[claim_id]
-        return json.dumps({"id": c.id, "warranty_id": c.warranty_id, "claimer": str(c.claimer), "evidence_urls": c.evidence_urls, "description": c.description, "status": c.status, "verdict": c.verdict, "reason": c.reason, "confidence": int(str(c.confidence)), "adjudicated_at": str(c.adjudicated_at)})
+        half = amount // bigint(2)
+        rem = amount - half
+        gl.get_contract_at(Address(str(w.customer_address))).emit_transfer(value=u256(half))
+        gl.get_contract_at(Address(str(w.creator))).emit_transfer(value=u256(rem))
+        w.status = "RELEASED"
+        w.locked_amount = bigint(0)
+        self.warranties[warranty_id] = w
 
-    @gl.public.view
-    def get_all_warranties(self) -> str:
+    def _parse_llm_json(self, text) -> dict:
         import json
-        result = {}
-        for wid, w in self.warranties.items():
-            result[wid] = {"id": w.id, "creator": str(w.creator), "customer_address": str(w.customer_address), "product_info": w.product_info, "policy_url": w.policy_url, "locked_amount": str(w.locked_amount), "expiry": str(w.expiry), "status": w.status}
-        return json.dumps(result)
+        if isinstance(text, dict):
+            return text
+        if hasattr(text, "__dict__"):
+            return text.__dict__
+        if not isinstance(text, str):
+            text = str(text)
+        t = text.strip()
+        if t.startswith("```json"):
+            t = t[7:]
+        elif t.startswith("```"):
+            t = t[3:]
+        if t.endswith("```"):
+            t = t[:-3]
+        try:
+            return json.loads(t.strip())
+        except Exception:
+            return {"verdict": "ESCALATE", "confidence": 0, "reason": "JSON parse error"}
 
-    @gl.public.view
-    def get_all_claims(self) -> str:
-        import json
-        result = {}
-        for cid, c in self.claims.items():
-            result[cid] = {"id": c.id, "warranty_id": c.warranty_id, "claimer": str(c.claimer), "evidence_urls": c.evidence_urls, "description": c.description, "status": c.status, "verdict": c.verdict, "reason": c.reason, "confidence": int(str(c.confidence)), "adjudicated_at": str(c.adjudicated_at)}
-        return json.dumps(result)
+    def _effective_verdict(self, data: dict) -> str:
+        if not isinstance(data, dict):
+            return "ESCALATE"
+        verdict = str(data.get("verdict", "ESCALATE")).upper().strip()
+        if verdict not in ["COVERED", "PARTIAL", "REJECTED", "ESCALATE"]:
+            verdict = "ESCALATE"
+        try:
+            conf = int(str(data.get("confidence", 0)))
+        except Exception:
+            conf = 0
+        if conf < 65:
+            verdict = "ESCALATE"
+        return verdict
