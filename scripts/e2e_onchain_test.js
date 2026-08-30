@@ -2,7 +2,7 @@ import { createClient } from 'genlayer-js';
 import { studionet } from 'genlayer-js/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 
-const CONTRACT_ADDRESS = '0x8629f1744D06aaFAcE76f57Ca6148FEfca92966A';
+const CONTRACT_ADDRESS = '0xD5728ec2C709E723Ae5D07Ca0F4E695c3174b3bc';
 
 // Known Studionet simulator test key for automated live E2E testing
 const TEST_KEY = '0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d';
