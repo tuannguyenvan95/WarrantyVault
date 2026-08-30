@@ -15,7 +15,7 @@ const studionet = {
   }
 };
 
-const CONTRACT_ADDRESS = "0xD5728ec2C709E723Ae5D07Ca0F4E695c3174b3bc";
+const CONTRACT_ADDRESS = "0x1B7a7b6A5701449811A4595b45D0492c47989Fd5";
 
 const containerVariants = {
   hidden: { opacity: 0 },

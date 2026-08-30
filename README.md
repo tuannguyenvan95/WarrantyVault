@@ -123,6 +123,6 @@ npm run dev
 ## 🌐 Deployed Network Config (GenLayer Studionet)
 
 * **Target Network**: GenLayer Studionet
-* **Contract Address**: `0xD5728ec2C709E723Ae5D07Ca0F4E695c3174b3bc`
-* **Explorer URL**: [GenLayer Studio Explorer](https://explorer-studio.genlayer.com/address/0xD5728ec2C709E723Ae5D07Ca0F4E695c3174b3bc)
+* **Contract Address**: `0x1B7a7b6A5701449811A4595b45D0492c47989Fd5`
+* **Explorer URL**: [GenLayer Studio Explorer](https://explorer-studio.genlayer.com/address/0x1B7a7b6A5701449811A4595b45D0492c47989Fd5)
 * **Live dApp URL**: [https://warranty-vault-genlayer.vercel.app](https://warranty-vault-genlayer.vercel.app)
