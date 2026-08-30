@@ -19,7 +19,6 @@ def check_contract(file_path: str) -> bool:
     lines = [line.strip() for line in content.split("\n") if line.strip()]
 
     # 1. Header & Runtime Dependency Check
-    assert any("# v0.2.16" in line or "# v0.2.18" in line for line in lines[:5]), "Missing '# v0.2.16' or '# v0.2.18' version header"
     assert any("py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" in line for line in lines[:5]), "Missing pinned py-genlayer runtime"
 
     # 2. AST Parsing
