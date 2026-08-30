@@ -72,5 +72,17 @@ class TestWarrantyVaultContract(unittest.TestCase):
     def test_contract_initialization(self):
         self.assertEqual(self.contract.next_warranty_id, 0)
 
+    def test_parse_iso_timestamp(self):
+        parsed = self.contract._parse_iso_timestamp("2026-08-30T13:30:57Z")
+        self.assertEqual(parsed, 1788096657)
+
+    def test_parse_iso_timestamp_with_milliseconds(self):
+        parsed = self.contract._parse_iso_timestamp("2026-08-30T13:30:57.123456Z")
+        self.assertEqual(parsed, 1788096657)
+
+    def test_parse_iso_timestamp_invalid(self):
+        parsed = self.contract._parse_iso_timestamp("invalid-date-string")
+        self.assertEqual(parsed, 0)
+
 if __name__ == "__main__":
     unittest.main()
