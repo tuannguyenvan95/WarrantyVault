@@ -137,9 +137,11 @@ class Contract(gl.Contract):
         if expiry <= bigint(0):
             raise UserError("Expiry timestamp must be greater than 0")
 
-        # Expiry time check against current transaction timestamp
+        # Expiry time check against current transaction timestamp (Fail-Closed)
         current_time = self._get_current_timestamp()
-        if current_time > bigint(0) and expiry <= current_time:
+        if current_time <= bigint(0):
+            raise UserError("Cannot verify runtime timestamp: timestamp unavailable")
+        if expiry <= current_time:
             raise UserError("Expiry must be in the future")
 
         warranty_id = str(self.next_warranty_id)
@@ -174,9 +176,11 @@ class Contract(gl.Contract):
         if not description or not str(description).strip():
             raise UserError("Claim description is required")
 
-        # Expiry check using trusted runtime timestamp
+        # Expiry check using trusted runtime timestamp (Fail-Closed)
         current_time = self._get_current_timestamp()
-        if current_time > bigint(0) and w.expiry <= current_time:
+        if current_time <= bigint(0):
+            raise UserError("Cannot verify runtime timestamp: timestamp unavailable")
+        if w.expiry <= current_time:
             raise UserError("Warranty has expired")
 
         w.claim_description = str(description).strip()

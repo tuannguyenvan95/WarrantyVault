@@ -113,10 +113,28 @@ python -m unittest tests/test_warranty_vault.py
 python scripts/verify_contract.py
 ```
 
-### 5. Launch the Frontend
+### 5. Run Live On-Chain Expired Warranty Rejection Audit
+```bash
+node scripts/test_expired_warranty_onchain.js
+```
+
+### 6. Launch the Frontend
 ```bash
 npm run dev
 ```
+
+---
+
+## 🧪 On-Chain Verification & Security Proofs
+
+We have verified on-chain on GenLayer Studionet that expired warranties are strictly rejected with `UserError("Warranty has expired")` and that fail-closed semantics prevent expired claims from passing:
+
+* **Target Contract**: [`0x1B7a7b6A5701449811A4595b45D0492c47989Fd5`](https://explorer-studio.genlayer.com/address/0x1B7a7b6A5701449811A4595b45D0492c47989Fd5)
+* **Creation Tx (Short 10s Expiry)**: [`0x80e70857a49bd4fa62acb9271ca5962c508a2791bc7f24edb5bceb7caf3b5a08`](https://explorer-studio.genlayer.com/tx/0x80e70857a49bd4fa62acb9271ca5962c508a2791bc7f24edb5bceb7caf3b5a08)
+* **Expired Claim Revert Tx (Proven On-Chain Rejection)**: [`0x00027a336f21f12e90191a9179dddc2dc745aa09afb633311cdaa1d433d29c1c`](https://explorer-studio.genlayer.com/tx/0x00027a336f21f12e90191a9179dddc2dc745aa09afb633311cdaa1d433d29c1c)
+  * Revert Reason: `UserError: Warranty has expired`
+  * Execution Outcome: `ERROR` / `contract_error`
+  * State Integrity: Storage remains `ACTIVE`, no expired claim accepted.
 
 ---
 
