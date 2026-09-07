@@ -137,10 +137,8 @@ class Contract(gl.Contract):
         if expiry <= bigint(0):
             raise UserError("Expiry timestamp must be greater than 0")
 
-        # Expiry time check against current transaction timestamp (Fail-Closed)
+        # Fail-closed check against current time
         current_time = self._get_current_timestamp()
-        if current_time <= bigint(0):
-            raise UserError("Cannot verify runtime timestamp: timestamp unavailable")
         if expiry <= current_time:
             raise UserError("Expiry must be in the future")
 
@@ -176,10 +174,8 @@ class Contract(gl.Contract):
         if not description or not str(description).strip():
             raise UserError("Claim description is required")
 
-        # Expiry check using trusted runtime timestamp (Fail-Closed)
+        # Fail-closed expiry check: reverts if timestamp fails or if warranty has expired
         current_time = self._get_current_timestamp()
-        if current_time <= bigint(0):
-            raise UserError("Cannot verify runtime timestamp: timestamp unavailable")
         if w.expiry <= current_time:
             raise UserError("Warranty has expired")
 
@@ -394,17 +390,23 @@ class Contract(gl.Contract):
         return verdict
 
     def _get_current_timestamp(self) -> bigint:
-        # Derive trusted execution timestamp from gl.message_raw with safe fallback
-        if hasattr(gl, "message_raw") and isinstance(gl.message_raw, dict):
-            dt_raw = gl.message_raw.get("datetime", None)
-            if dt_raw:
-                try:
-                    ts = self._parse_iso_timestamp(str(dt_raw))
-                    if ts > 0:
-                        return bigint(ts)
-                except Exception:
-                    pass
-        return bigint(0)
+        """
+        Derive trusted execution timestamp from gl.message_raw context.
+        FAIL-CLOSED INVARIANT: Raises UserError immediately if timestamp is missing,
+        malformed, or non-positive. Never returns 0.
+        """
+        if not hasattr(gl, "message_raw") or not isinstance(gl.message_raw, dict):
+            raise UserError("Trusted execution timestamp missing from transaction context")
+
+        dt_raw = gl.message_raw.get("datetime", None)
+        if not dt_raw:
+            raise UserError("Trusted execution timestamp field 'datetime' not found")
+
+        ts = self._parse_iso_timestamp(str(dt_raw))
+        if ts <= 0:
+            raise UserError("Trusted execution timestamp is invalid or resolved to non-positive value")
+
+        return bigint(ts)
 
     def _parse_iso_timestamp(self, dt_str: str) -> int:
         try:
@@ -426,16 +428,16 @@ class Contract(gl.Contract):
             days_in_months = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
             days = 0
             for y in range(1970, year):
-                if y % 4 == 0:
+                if (y % 4 == 0 and y % 100 != 0) or (y % 400 == 0):
                     days += 366
                 else:
                     days += 365
-            is_leap = 1 if (year % 4 == 0) else 0
+            is_leap = 1 if ((year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)) else 0
             if is_leap:
                 days_in_months[2] = 29
             for m in range(1, month):
                 days += days_in_months[m]
             days += (day - 1)
             return days * 86400 + hour * 3600 + minute * 60 + second
-        except Exception:
-            return 0
+        except Exception as e:
+            raise UserError(f"Failed to parse runtime ISO timestamp: {str(e)}")

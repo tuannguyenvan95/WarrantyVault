@@ -88,8 +88,9 @@ class TestWarrantyVaultContract(unittest.TestCase):
         self.assertEqual(parsed, 1788096657)
 
     def test_parse_iso_timestamp_invalid(self):
-        parsed = self.contract._parse_iso_timestamp("invalid-date-string")
-        self.assertEqual(parsed, 0)
+        from warranty_vault import UserError
+        with self.assertRaises(UserError):
+            self.contract._parse_iso_timestamp("invalid-date-string")
 
     def test_claim_cannot_pass_when_timestamp_cannot_be_read(self):
         """Verify that failure to read runtime timestamp fails-closed and cannot allow an expired claim through."""
@@ -119,7 +120,7 @@ class TestWarrantyVaultContract(unittest.TestCase):
             genlayer.gl.message_raw = None
             with self.assertRaises(UserError) as ctx:
                 self.contract.file_claim(w_id, "Screen defect", "https://evidence.url")
-            self.assertIn("Cannot verify runtime timestamp", str(ctx.exception))
+            self.assertIn("Trusted execution timestamp", str(ctx.exception))
         finally:
             genlayer.gl.message_raw = orig_msg_raw
 
@@ -193,7 +194,7 @@ class TestWarrantyVaultContract(unittest.TestCase):
                     "Product",
                     "9999999999"
                 )
-            self.assertIn("Cannot verify runtime timestamp", str(ctx.exception))
+            self.assertIn("Trusted execution timestamp", str(ctx.exception))
         finally:
             genlayer.gl.message_raw = orig_msg_raw
 
