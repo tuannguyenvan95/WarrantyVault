@@ -61,6 +61,8 @@ export const canReleaseEscalated = (claim: any): { canRelease: boolean; timeRema
 // Helper to get badge class for claim status
 export const getClaimBadgeClass = (claim: any): string => {
   if (claim.status === 'RELEASED') return 'released';
+  if (claim.status === 'APPEALED') return 'warning';
+  if (claim.status === 'REJECTED') return 'rejected';
   if (claim.status === 'ADJUDICATED') {
     return (claim.verdict || 'ESCALATE').toLowerCase();
   }
@@ -70,8 +72,25 @@ export const getClaimBadgeClass = (claim: any): string => {
 // Helper to get badge display text
 export const getClaimBadgeText = (claim: any): string => {
   if (claim.status === 'RELEASED') return 'RELEASED';
+  if (claim.status === 'APPEALED') return '⚖️ APPEAL ACTIVE';
+  if (claim.status === 'REJECTED') return '❌ REJECTED (APPEAL WINDOW)';
   if (claim.status === 'ADJUDICATED') return claim.verdict;
   return claim.status;
+};
+
+// Helper to get merchant tier badge styles
+export const getMerchantTierBadge = (tier: string): { label: string; color: string; bg: string; icon: string } => {
+  switch ((tier || '').toUpperCase()) {
+    case 'PLATINUM':
+      return { label: 'PLATINUM', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.15)', icon: '💎' };
+    case 'GOLD':
+      return { label: 'GOLD', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', icon: '🥇' };
+    case 'SILVER':
+      return { label: 'SILVER', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)', icon: '🥈' };
+    case 'BRONZE':
+    default:
+      return { label: 'BRONZE', color: '#b45309', bg: 'rgba(180, 83, 9, 0.15)', icon: '🥉' };
+  }
 };
 
 // Helper to format wallet address

@@ -69,6 +69,25 @@ We have upgraded the protocol with enterprise-grade blockchain AI security featu
 
 ---
 
+## ⚡ Milestone 2 Major Protocol Upgrades
+
+1. **Two-Tier Staked Consumer Appeal Tribunal (`appeal_claim`, `adjudicate_appeal`)**:
+   - Consumers whose claims are initially rejected have a 7-day challenge window to stake an `appeal_bond` and provide counter-arguments.
+   - Adjudicated by a high-rigor 3-agent ensemble prompt (Forensic Evidence Investigator, Consumer Protection Ombudsman, Legal Policy Arbiter).
+   - If overturned, consumer receives 100% of the warranty escrow payout + full refund of their appeal bond. If upheld, merchant receives the bond as liquidated damages.
+2. **On-Chain Merchant Reputation & Trust Metrics (`MerchantReputation`)**:
+   - Tracks warranties created, claims filed, honors, rejections, appeals, and overturned verdicts on-chain.
+   - Dynamic trust scoring algorithm (0-100) assigning decentralized merchant tiers: **Platinum**, **Gold**, **Silver**, and **Bronze**.
+   - Public views `get_merchant_reputation` and `get_all_merchants` powering a transparent merchant trust leaderboard in the dApp.
+3. **Pull-Payment Vault Architecture (`withdraw_balance`, `pending_withdrawals`)**:
+   - Implements CEI (Checks-Effects-Interactions) compliant pull-payments to safeguard contracts against reentrancy and unexpected transfer failures.
+4. **Enhanced Frontend dApp**:
+   - Interactive Staked Appeal Modal & Supreme AI Tribunal status cards.
+   - Merchant Reputation Leaderboard tab with tier badges, live statistics, and trust scores.
+   - Merchant Pull-Payment withdrawal balance management.
+
+---
+
 ## 🛠️ Tech Stack & Structure
 
 * **Smart Contract**: Python (GenVM Intelligent Contract framework)
@@ -129,9 +148,9 @@ npm run dev
 
 We have verified on-chain on GenLayer Studionet that expired warranties are strictly rejected with `UserError("Warranty has expired")` and that fail-closed semantics prevent expired claims from passing:
 
-* **Target Contract**: [`0xe2b3459193Aaa6B616ceA6C5903b5978D7BDbd5B`](https://explorer-studio.genlayer.com/address/0xe2b3459193Aaa6B616ceA6C5903b5978D7BDbd5B)
-* **Creation Tx (Short 10s Expiry)**: [`0xb18a35d1d6ab51e37f4ea4fa88aba16be195f39a3d6821eed95d11ab20e020ca`](https://explorer-studio.genlayer.com/tx/0xb18a35d1d6ab51e37f4ea4fa88aba16be195f39a3d6821eed95d11ab20e020ca)
-* **Expired Claim Revert Tx (Proven On-Chain Rejection)**: [`0x65f06b18565a9d695be6f8fb6a018593ce755a2aacf76372cc9debb3df1e0d80`](https://explorer-studio.genlayer.com/tx/0x65f06b18565a9d695be6f8fb6a018593ce755a2aacf76372cc9debb3df1e0d80)
+* **Target Contract**: [`0x2839CE894feB06A4A986423842b426f27083a3Ef`](https://explorer-studio.genlayer.com/address/0x2839CE894feB06A4A986423842b426f27083a3Ef)
+* **Creation Tx (Short 10s Expiry)**: [`0x0392e683d28f2a3006351f4ff4fae9a6b83404178206c3b4eea3a96772b105df`](https://explorer-studio.genlayer.com/tx/0x0392e683d28f2a3006351f4ff4fae9a6b83404178206c3b4eea3a96772b105df)
+* **Expired Claim Revert Tx (Proven On-Chain Rejection)**: [`0x4214a561e7058a6e02c99fe0db504114fb86fcebb95b4d094c78f7b1a3318d6a`](https://explorer-studio.genlayer.com/tx/0x4214a561e7058a6e02c99fe0db504114fb86fcebb95b4d094c78f7b1a3318d6a)
   * Revert Reason: `UserError: Warranty has expired`
   * Execution Outcome: `ERROR` / `contract_error`
   * State Integrity: Storage remains `ACTIVE`, no expired claim accepted.
@@ -141,6 +160,6 @@ We have verified on-chain on GenLayer Studionet that expired warranties are stri
 ## 🌐 Deployed Network Config (GenLayer Studionet)
 
 * **Target Network**: GenLayer Studionet
-* **Contract Address**: `0xe2b3459193Aaa6B616ceA6C5903b5978D7BDbd5B`
-* **Explorer URL**: [GenLayer Studio Explorer](https://explorer-studio.genlayer.com/address/0xe2b3459193Aaa6B616ceA6C5903b5978D7BDbd5B)
+* **Contract Address**: `0x2839CE894feB06A4A986423842b426f27083a3Ef`
+* **Explorer URL**: [GenLayer Studio Explorer](https://explorer-studio.genlayer.com/address/0x2839CE894feB06A4A986423842b426f27083a3Ef)
 * **Live dApp URL**: [https://warranty-vault-genlayer.vercel.app](https://warranty-vault-genlayer.vercel.app)

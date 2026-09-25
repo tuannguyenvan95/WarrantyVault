@@ -3,7 +3,7 @@ import { createClient } from 'genlayer-js';
 import { studionet as originalStudionet } from 'genlayer-js/chains';
 import { Icons } from './utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { formatExpiryTime, canReleaseEscalated, getClaimBadgeClass, getClaimBadgeText, formatAddress, weiToEth, ethToWei } from './helpers';
+import { formatExpiryTime, canReleaseEscalated, getClaimBadgeClass, getClaimBadgeText, getMerchantTierBadge, formatAddress, weiToEth, ethToWei } from './helpers';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { QRCodeCanvas } from 'qrcode.react';
 import './index.css';
@@ -15,7 +15,7 @@ const studionet = {
   }
 };
 
-const CONTRACT_ADDRESS = "0xe2b3459193Aaa6B616ceA6C5903b5978D7BDbd5B";
+const CONTRACT_ADDRESS = "0x2839CE894feB06A4A986423842b426f27083a3Ef";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -31,6 +31,8 @@ export default function App() {
   const [account, setAccount] = useState<string | null>(null);
   const [warranties, setWarranties] = useState<any[]>([]);
   const [claims, setClaims] = useState<any[]>([]);
+  const [merchants, setMerchants] = useState<any[]>([]);
+  const [pendingWithdrawal, setPendingWithdrawal] = useState<string>('0');
   
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -39,12 +41,17 @@ export default function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingIPFS, setUploadingIPFS] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'create' | 'claims' | 'analytics'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'create' | 'claims' | 'analytics' | 'reputation'>('dashboard');
   const [selectedWarranty, setSelectedWarranty] = useState<any | null>(null);
   const [filterWarrantyId, setFilterWarrantyId] = useState<string>('all');
   
   const [userRole, setUserRole] = useState<'RETAILER' | 'CUSTOMER'>('RETAILER');
   const [newWarrantyId, setNewWarrantyId] = useState<string | null>(null);
+
+  const [isAppealModalOpen, setIsAppealModalOpen] = useState(false);
+  const [appealTargetClaim, setAppealTargetClaim] = useState<any | null>(null);
+  const [appealBondAmount, setAppealBondAmount] = useState('0.05');
+  const [appealArgument, setAppealArgument] = useState('');
 
   useEffect(() => {
     const initClient = createClient({
@@ -156,6 +163,33 @@ export default function App() {
       const claimsObj = typeof claimsRes === 'string' ? (claimsRes.trim() ? JSON.parse(claimsRes) : {}) : (claimsRes || {});
       const claimsList = Object.values(claimsObj).sort((a: any, b: any) => Number(b.id) - Number(a.id));
       setClaims(claimsList);
+
+      // Fetch merchants for reputation leaderboard
+      try {
+        const merchantsRes: any = await client.readContract({
+          address: CONTRACT_ADDRESS,
+          functionName: 'get_all_merchants',
+          args: []
+        });
+        const merchantsObj = typeof merchantsRes === 'string' ? (merchantsRes.trim() ? JSON.parse(merchantsRes) : {}) : (merchantsRes || {});
+        setMerchants(Object.values(merchantsObj));
+      } catch (e) {
+        console.warn('Could not fetch merchants:', e);
+      }
+
+      // Fetch pending withdrawal balance
+      if (account) {
+        try {
+          const pendingRes: any = await client.readContract({
+            address: CONTRACT_ADDRESS,
+            functionName: 'get_pending_withdrawal',
+            args: [account]
+          });
+          setPendingWithdrawal(pendingRes ? pendingRes.toString() : '0');
+        } catch (e) {
+          console.warn('Could not fetch pending withdrawal:', e);
+        }
+      }
     } catch (err: any) {
       console.error(err);
       if (!quiet) {
@@ -335,6 +369,96 @@ Customer: ${customerAddress}`;
       setLoading(false);
     }
   };
+
+  const handleAppealSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!client || !account || !appealTargetClaim) return;
+    try {
+      setLoading(true);
+      const hash = await client.writeContract({
+        address: CONTRACT_ADDRESS,
+        functionName: 'appeal_claim',
+        args: [appealTargetClaim.warranty_id.toString(), appealArgument],
+        value: ethToWei(Number(appealBondAmount) || 0.05)
+      } as any);
+      await client.waitForTransactionReceipt({ hash, timeout: 120_000 });
+      setSuccessMsg("Appeal submitted successfully! Supreme AI Tribunal session initiated.");
+      setTimeout(() => setSuccessMsg(null), 5000);
+      setIsAppealModalOpen(false);
+      setAppealTargetClaim(null);
+      setAppealArgument('');
+      fetchWarranties();
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Failed to submit appeal");
+      setTimeout(() => setErrorMsg(null), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdjudicateAppeal = async (warrantyId: string) => {
+    if (!client || !account) return;
+    try {
+      setLoading(true);
+      const hash = await client.writeContract({
+        address: CONTRACT_ADDRESS,
+        functionName: 'adjudicate_appeal',
+        args: [warrantyId]
+      } as any);
+      await client.waitForTransactionReceipt({ hash, timeout: 180_000 });
+      setSuccessMsg("Supreme AI Tribunal adjudication complete!");
+      setTimeout(() => setSuccessMsg(null), 5000);
+      fetchWarranties();
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Failed to run tribunal adjudication");
+      setTimeout(() => setErrorMsg(null), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClaimUncontested = async (warrantyId: string) => {
+    if (!client || !account) return;
+    try {
+      setLoading(true);
+      const hash = await client.writeContract({
+        address: CONTRACT_ADDRESS,
+        functionName: 'claim_uncontested_deposit',
+        args: [warrantyId]
+      } as any);
+      await client.waitForTransactionReceipt({ hash, timeout: 120_000 });
+      setSuccessMsg("Uncontested deposit claimed successfully!");
+      setTimeout(() => setSuccessMsg(null), 5000);
+      fetchWarranties();
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Failed to claim uncontested deposit");
+      setTimeout(() => setErrorMsg(null), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWithdrawBalance = async () => {
+    if (!client || !account) return;
+    try {
+      setLoading(true);
+      const hash = await client.writeContract({
+        address: CONTRACT_ADDRESS,
+        functionName: 'withdraw_balance',
+        args: []
+      } as any);
+      await client.waitForTransactionReceipt({ hash, timeout: 120_000 });
+      setSuccessMsg("Balance withdrawn successfully from vault!");
+      setTimeout(() => setSuccessMsg(null), 5000);
+      fetchWarranties();
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Failed to withdraw balance");
+      setTimeout(() => setErrorMsg(null), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const analyticsData = useMemo(() => {
     const verdictCounts: Record<string, number> = { COVERED: 0, REJECTED: 0, PARTIAL: 0, ESCALATE: 0, PENDING: 0 };
     claims.forEach(c => {
@@ -604,6 +728,9 @@ Customer: ${customerAddress}`;
                 </>
               )}
               <button className={`btn ${activeTab === 'claims' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('claims')}>Claims</button>
+              <button className={`btn ${activeTab === 'reputation' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('reputation')}>
+                🛡️ Merchant Reputation
+              </button>
             </div>
 
             {loading && (
@@ -1255,6 +1382,61 @@ Customer: ${customerAddress}`;
                                   </div>
                                 );
                               })()}
+
+                              {/* Staked Appeal Section for REJECTED Claims */}
+                              {c.status === 'REJECTED' && (
+                                <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                                    <div style={{ flex: 1 }}>
+                                      <h5 style={{ margin: '0 0 0.25rem', fontSize: '0.875rem', color: 'var(--warning-color)' }}>⚖️ 7-Day Challenge Window Active</h5>
+                                      <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                        Consumer can challenge this rejection before the Supreme AI Tribunal by staking an appeal bond.
+                                      </p>
+                                    </div>
+                                    {userRole === 'CUSTOMER' ? (
+                                      <button 
+                                        className="btn btn-primary" 
+                                        onClick={() => { setAppealTargetClaim(c); setIsAppealModalOpen(true); }}
+                                        style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+                                      >
+                                        ⚖️ Stake Bond & Appeal
+                                      </button>
+                                    ) : (
+                                      <button 
+                                        className="btn btn-secondary" 
+                                        onClick={() => handleClaimUncontested(c.warranty_id.toString())}
+                                        style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+                                      >
+                                        💰 Claim Uncontested Deposit (After 7d)
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Supreme AI Tribunal Session Active */}
+                              {c.status === 'APPEALED' && (
+                                <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(139, 92, 246, 0.1)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                    <h4 style={{ color: '#c084fc', margin: 0, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                      🏛️ Supreme AI Tribunal Session Active
+                                    </h4>
+                                    <span style={{ fontSize: '0.75rem', color: '#c084fc', background: 'rgba(139,92,246,0.2)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                                      Bond: {weiToEth(c.appeal_deposit || '0')} GEN
+                                    </span>
+                                  </div>
+                                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
+                                    <strong>Consumer Challenge Argument:</strong> {c.appeal_reason || 'Disputing original rejection criteria'}
+                                  </p>
+                                  <button 
+                                    className="btn btn-primary" 
+                                    onClick={() => handleAdjudicateAppeal(c.warranty_id.toString())} 
+                                    style={{ width: '100%', fontSize: '0.875rem', padding: '0.6rem 1rem', background: 'linear-gradient(135deg, #8b5cf6, #ec4899)' }}
+                                  >
+                                    ⚖️ Convene 3-Judge AI Tribunal (Forensic, Ombudsman, Arbiter)
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -1265,8 +1447,134 @@ Customer: ${customerAddress}`;
                 )}
               </div>
             )}
+
+            {/* Merchant Reputation Tab */}
+            {activeTab === 'reputation' && !loading && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div>
+                    <h2 style={{ fontSize: '1.75rem', fontWeight: 700, margin: '0 0 0.5rem' }}>🛡️ Merchant Reputation & Trust Metrics</h2>
+                    <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.875rem' }}>
+                      On-chain decentralized trust score computed dynamically by GenLayer smart contracts.
+                    </p>
+                  </div>
+                  {/* Pull-Payment Vault Card */}
+                  <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', padding: '1rem 1.5rem', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block' }}>Pull-Payment Vault Balance</span>
+                      <strong style={{ fontSize: '1.2rem', color: 'var(--accent-color)' }}>{weiToEth(pendingWithdrawal)} GEN</strong>
+                    </div>
+                    {Number(pendingWithdrawal) > 0 ? (
+                      <button className="btn btn-primary" onClick={handleWithdrawBalance} style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}>
+                        Withdraw Balance
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.05)', padding: '0.4rem 0.8rem', borderRadius: '4px' }}>
+                        Vault Empty
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {merchants.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '4rem 2rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: 'var(--radius-lg)', border: '1px dashed var(--border-color)' }}>
+                    <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(56, 189, 248, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+                      <Icons.Shield style={{ width: '32px', height: '32px', color: '#38bdf8' }} />
+                    </div>
+                    <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', fontWeight: 600 }}>No Merchant Records Yet</h3>
+                    <p style={{ color: 'var(--text-secondary)', maxWidth: '400px', margin: '0 auto' }}>
+                      Create a warranty to record merchant on-chain reputation and begin tracking trust score tiers.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                    {merchants.map((m, idx) => {
+                      const badge = getMerchantTierBadge(m.tier);
+                      return (
+                        <div key={idx} className="card glass-panel" style={{ border: `1px solid ${badge.color}40`, position: 'relative', overflow: 'hidden' }}>
+                          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: badge.color }} />
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+                            <div>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Merchant Wallet</span>
+                              <strong style={{ fontSize: '1rem' }}>{formatAddress(m.merchant)}</strong>
+                            </div>
+                            <span style={{ padding: '0.35rem 0.75rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700, color: badge.color, background: badge.bg, border: `1px solid ${badge.color}60` }}>
+                              {badge.icon} {badge.label}
+                            </span>
+                          </div>
+
+                          <div style={{ marginBottom: '1.25rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.4rem' }}>
+                              <span style={{ color: 'var(--text-secondary)' }}>Trust Score</span>
+                              <strong style={{ color: badge.color }}>{m.trust_score} / 100</strong>
+                            </div>
+                            <div style={{ height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '999px', overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, m.trust_score))}%`, background: badge.color, borderRadius: '999px', transition: 'width 0.5s ease' }} />
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.8rem' }}>
+                            <div style={{ padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-md)' }}>
+                              <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.7rem' }}>Total Warranties</span>
+                              <strong style={{ fontSize: '1rem' }}>{m.total_warranties}</strong>
+                            </div>
+                            <div style={{ padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-md)' }}>
+                              <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.7rem' }}>Claims Honored</span>
+                              <strong style={{ fontSize: '1rem', color: 'var(--success-color)' }}>{m.claims_honored}</strong>
+                            </div>
+                            <div style={{ padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-md)' }}>
+                              <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.7rem' }}>Claims Rejected</span>
+                              <strong style={{ fontSize: '1rem', color: 'var(--danger-color)' }}>{m.claims_rejected}</strong>
+                            </div>
+                            <div style={{ padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-md)' }}>
+                              <span style={{ color: 'var(--text-secondary)', display: 'block', fontSize: '0.7rem' }}>Overturned Appeals</span>
+                              <strong style={{ fontSize: '1rem', color: Number(m.appeals_overturned) > 0 ? 'var(--warning-color)' : 'var(--text-secondary)' }}>
+                                {m.appeals_overturned}
+                              </strong>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
+
+        {/* Staked Appeal Modal */}
+        <AnimatePresence>
+          {isAppealModalOpen && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+              <motion.div initial={{ y: 50, scale: 0.9 }} animate={{ y: 0, scale: 1 }} exit={{ y: 50, scale: 0.9 }} className="card glass-panel" style={{ width: '100%', maxWidth: '540px', padding: '2rem' }}>
+                <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  ⚖️ File Staked Consumer Appeal
+                </h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+                  Challenge this rejection before the Supreme AI Tribunal (Forensic Investigator, Consumer Protection Ombudsman, and Legal Arbiter). You must stake an appeal bond.
+                </p>
+                <form onSubmit={handleAppealSubmit}>
+                  <div className="input-group">
+                    <label className="input-label">Appeal Bond Deposit (GEN)</label>
+                    <input className="input-field" type="number" step="0.01" min="0.01" value={appealBondAmount} onChange={e => setAppealBondAmount(e.target.value)} required />
+                    <span style={{ fontSize: '0.75rem', color: 'var(--success-color)', marginTop: '0.4rem', display: 'block' }}>
+                      ✓ If the tribunal overturns the rejection, you receive 100% of your bond back + the full warranty claim payout!
+                    </span>
+                  </div>
+                  <div className="input-group">
+                    <label className="input-label">Detailed Appeal Argument</label>
+                    <textarea className="input-field" rows={4} value={appealArgument} onChange={e => setAppealArgument(e.target.value)} placeholder="Explain why the initial rejection was unfair, referencing specific policy clauses or evidence..." required />
+                  </div>
+                  <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                    <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setIsAppealModalOpen(false)}>Cancel</button>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 2, background: 'linear-gradient(135deg, #8b5cf6, #ec4899)' }}>Stake Bond & Submit</button>
+                  </div>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
       
       {/* VIP Footer */}
