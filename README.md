@@ -148,9 +148,9 @@ npm run dev
 
 We have verified on-chain on GenLayer Studionet that expired warranties are strictly rejected with `UserError("Warranty has expired")` and that fail-closed semantics prevent expired claims from passing:
 
-* **Target Contract**: [`0x2839CE894feB06A4A986423842b426f27083a3Ef`](https://explorer-studio.genlayer.com/address/0x2839CE894feB06A4A986423842b426f27083a3Ef)
-* **Creation Tx (Short 10s Expiry)**: [`0x0392e683d28f2a3006351f4ff4fae9a6b83404178206c3b4eea3a96772b105df`](https://explorer-studio.genlayer.com/tx/0x0392e683d28f2a3006351f4ff4fae9a6b83404178206c3b4eea3a96772b105df)
-* **Expired Claim Revert Tx (Proven On-Chain Rejection)**: [`0x4214a561e7058a6e02c99fe0db504114fb86fcebb95b4d094c78f7b1a3318d6a`](https://explorer-studio.genlayer.com/tx/0x4214a561e7058a6e02c99fe0db504114fb86fcebb95b4d094c78f7b1a3318d6a)
+* **Target Contract**: [`0xC5770D8A88c56d7Ed9CFcF28C68cbce5eB30D397`](https://explorer-studio.genlayer.com/address/0xC5770D8A88c56d7Ed9CFcF28C68cbce5eB30D397)
+* **Creation Tx (Short 10s Expiry)**: [`0x67780bcda6905e6561fb8d942086fce57c86ea3aebf03294b837a2bc9f8615ae`](https://explorer-studio.genlayer.com/tx/0x67780bcda6905e6561fb8d942086fce57c86ea3aebf03294b837a2bc9f8615ae)
+* **Expired Claim Revert Tx (Proven On-Chain Rejection)**: [`0x1abba9c7daf5660861e9b697794d464e7ff00a880f0c7fec76d6b97d750f31ca`](https://explorer-studio.genlayer.com/tx/0x1abba9c7daf5660861e9b697794d464e7ff00a880f0c7fec76d6b97d750f31ca)
   * Revert Reason: `UserError: Warranty has expired`
   * Execution Outcome: `ERROR` / `contract_error`
   * State Integrity: Storage remains `ACTIVE`, no expired claim accepted.
@@ -160,6 +160,6 @@ We have verified on-chain on GenLayer Studionet that expired warranties are stri
 ## 🌐 Deployed Network Config (GenLayer Studionet)
 
 * **Target Network**: GenLayer Studionet
-* **Contract Address**: `0x2839CE894feB06A4A986423842b426f27083a3Ef`
-* **Explorer URL**: [GenLayer Studio Explorer](https://explorer-studio.genlayer.com/address/0x2839CE894feB06A4A986423842b426f27083a3Ef)
+* **Contract Address**: `0xC5770D8A88c56d7Ed9CFcF28C68cbce5eB30D397`
+* **Explorer URL**: [GenLayer Studio Explorer](https://explorer-studio.genlayer.com/address/0xC5770D8A88c56d7Ed9CFcF28C68cbce5eB30D397)
 * **Live dApp URL**: [https://warranty-vault-genlayer.vercel.app](https://warranty-vault-genlayer.vercel.app)
